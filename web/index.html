@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mind Map — Analyzing 21 Months of Claude Conversations</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Rendering your mind map…</div>
+</div>
+
+<!-- Progress bar -->
+<div id="progress-bar"></div>
+
+<!-- Navigation -->
+<nav id="nav">
+  <div class="logo">
+    <span>◆</span> mind.map
+  </div>
+  <ul id="nav-links">
+    <li><a href="#hero">Overview</a></li>
+    <li><a href="#timeline">Timeline</a></li>
+    <li><a href="#activity">Activity</a></li>
+    <li><a href="#topics">Topics</a></li>
+    <li><a href="#umap-section">Galaxy</a></li>
+    <li><a href="#graph-section">Network</a></li>
+  </ul>
+</nav>
+
+<!-- ── SECTION 1: Hero ─────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="section-inner">
+    <div class="hero-eyebrow">// A data science exploration</div>
+    <h1>Inside the<br/><em>Machine Mind</em></h1>
+    <p class="hero-sub">
+      21 months. 2,098 conversations. 7 million words.
+      An analysis of everything Jonathan asked Claude — and what it reveals
+      about how we think, work, and explore ideas with AI.
+    </p>
+
+    <div class="hero-stats" id="hero-stats">
+      <div class="stat-card" style="--accent-line: #7c6bff">
+        <div class="stat-value" data-target="2098" data-prefix="">0</div>
+        <div class="stat-label">Conversations</div>
+      </div>
+      <div class="stat-card" style="--accent-line: #ff6b9d">
+        <div class="stat-value" data-target="13690" data-prefix="">0</div>
+        <div class="stat-label">Messages exchanged</div>
+      </div>
+      <div class="stat-card" style="--accent-line: #6bffd3">
+        <div class="stat-value" data-target="7" data-suffix="M+" data-prefix="">0</div>
+        <div class="stat-label">Words of dialogue</div>
+      </div>
+      <div class="stat-card" style="--accent-line: #ffcc6b">
+        <div class="stat-value" data-target="91" data-prefix="">0</div>
+        <div class="stat-label">Active projects</div>
+      </div>
+      <div class="stat-card" style="--accent-line: #a855f7">
+        <div class="stat-value" data-target="414" data-prefix="">0</div>
+        <div class="stat-label">Active days</div>
+      </div>
+      <div class="stat-card" style="--accent-line: #22c55e">
+        <div class="stat-value" data-target="489" data-prefix="">0</div>
+        <div class="stat-label">Code conversations</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="mouse"><div class="wheel"></div></div>
+    <span>scroll to explore</span>
+  </div>
+</section>
+
+<!-- ── SECTION 2: Timeline ─────────────────────────────────────────────── -->
+<section id="timeline">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 01 — Behavioral Lens</div>
+      <h2>The Rhythm of Curiosity</h2>
+      <p>
+        Every dot is a day. Every spike is a burst of exploration.
+        The calendar never lies — here's when the thinking happened.
+      </p>
+    </div>
+
+    <div class="chart-wrap reveal">
+      <h3>Daily Conversation Activity — Jun 2024 to Mar 2026</h3>
+      <div id="heatmap-container"></div>
+      <div class="heatmap-legend">
+        <span>Less</span>
+        <div class="heatmap-legend-gradient" id="heatmap-legend-boxes"></div>
+        <span>More</span>
+      </div>
+    </div>
+
+    <div class="chart-wrap reveal" style="margin-top: 1.5rem">
+      <div class="chart-title-row">
+        <h3>Conversations per Month</h3>
+        <span class="label">Line chart</span>
+      </div>
+      <div id="monthly-chart"></div>
+    </div>
+
+    <div class="insight-box reveal">
+      <p>
+        The data reveals clear intellectual "seasons" — dense clusters of activity
+        punctuated by quieter periods. Peaks often correspond to project sprints,
+        new interests, or knowledge deep-dives.
+      </p>
+      <div class="source">→ derived from 2,098 timestamped conversations</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 3: Activity Patterns ───────────────────────────────────── -->
+<section id="activity">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 02 — Behavioral Lens</div>
+      <h2>When the Mind is Most Active</h2>
+      <p>
+        What time of day do you reach for Claude? Which days ignite the most conversations?
+        Your usage patterns reveal your cognitive rhythms.
+      </p>
+    </div>
+
+    <div class="chart-wrap reveal">
+      <h3>Conversations by Hour × Day of Week</h3>
+      <div id="activity-heatmap"></div>
+    </div>
+
+    <div class="grid-2 reveal">
+      <div class="chart-wrap">
+        <h3>Hour of Day</h3>
+        <div id="hour-chart"></div>
+      </div>
+      <div class="chart-wrap">
+        <h3>Day of Week</h3>
+        <div id="weekday-chart"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 4: Distributions ───────────────────────────────────────── -->
+<section id="distributions">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 03 — Behavioral Lens</div>
+      <h2>Anatomy of a Conversation</h2>
+      <p>
+        How deep do conversations go? How much do you write vs. how much does Claude respond?
+        The shape of dialogue reveals thinking style.
+      </p>
+    </div>
+
+    <div class="grid-2 reveal">
+      <div class="chart-wrap">
+        <h3>Turn Count Distribution</h3>
+        <div id="turn-chart"></div>
+      </div>
+      <div class="chart-wrap">
+        <h3>Message Length: Human vs Claude</h3>
+        <div id="msg-len-chart"></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap reveal">
+      <h3>Top 20 Deepest Conversations (by message count)</h3>
+      <div id="top-convs-chart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 5: Topics ───────────────────────────────────────────────── -->
+<section id="topics">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 04 — Topographical Lens</div>
+      <h2>The Landscape of Your Mind</h2>
+      <p>
+        TF-IDF + NMF topic modeling extracted 18 latent themes from 2,098 conversations.
+        Each theme is a territory in your intellectual world.
+      </p>
+    </div>
+
+    <div class="topic-grid reveal" id="topic-grid"></div>
+
+    <div class="chart-wrap reveal" id="topic-stream-wrap">
+      <div class="chart-title-row">
+        <h3>Topic Evolution Over Time</h3>
+        <span class="label">Stacked Area</span>
+      </div>
+      <div id="topic-stream-chart"></div>
+    </div>
+
+    <div class="chart-wrap reveal">
+      <div class="chart-title-row">
+        <h3>Bubble Chart — Topics by Conversation Volume</h3>
+        <span class="label">Force Layout</span>
+      </div>
+      <div id="topic-bubble-chart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 6: UMAP Galaxy ─────────────────────────────────────────── -->
+<section id="umap-section">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 05 — Topographical Lens</div>
+      <h2>Your Knowledge Galaxy</h2>
+      <p>
+        Every dot is a conversation. Position encodes semantic similarity — conversations
+        about related ideas cluster together. Generated using sentence embeddings
+        (all-MiniLM-L6-v2) → UMAP → HDBSCAN.
+      </p>
+    </div>
+
+    <div class="umap-controls reveal">
+      <button class="umap-btn active" data-color="topic">Color by Topic</button>
+      <button class="umap-btn" data-color="time">Color by Time</button>
+      <button class="umap-btn" data-color="length">Color by Length</button>
+      <button class="umap-btn" data-color="cluster">Color by Cluster</button>
+    </div>
+
+    <div id="umap-container" class="reveal">
+      <svg id="umap-svg"></svg>
+      <div id="umap-tooltip">
+        <div class="tt-name"></div>
+        <div class="tt-meta"></div>
+        <div class="tt-topic"></div>
+      </div>
+    </div>
+
+    <div class="cluster-legend" id="umap-legend"></div>
+  </div>
+</section>
+
+<!-- ── SECTION 7: Knowledge Graph ─────────────────────────────────────── -->
+<section id="graph-section">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// 06 — Relationship Lens</div>
+      <h2>The Web of Ideas</h2>
+      <p>
+        Which concepts co-appear across conversations? Stronger connections indicate
+        concepts Jonathan frequently explores <em>together</em>.
+        Node size reflects frequency; edge thickness reflects co-occurrence.
+      </p>
+    </div>
+
+    <div class="category-pills reveal" id="category-pills"></div>
+
+    <div id="graph-container" class="reveal">
+      <svg id="graph-svg"></svg>
+      <div id="graph-tooltip"></div>
+      <div class="graph-controls">
+        <button class="graph-btn" id="graph-zoom-in" title="Zoom in">+</button>
+        <button class="graph-btn" id="graph-zoom-out" title="Zoom out">−</button>
+        <button class="graph-btn" id="graph-reset" title="Reset">⌂</button>
+      </div>
+    </div>
+
+    <div class="cluster-legend" id="graph-legend"></div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────── -->
+<footer>
+  <p>A data science project analyzing Claude conversation exports</p>
+  <p style="margin-top: 0.5rem">Jonathan Kurniawan · 2026</p>
+  <div class="tech-stack">
+    <span class="tag">Python</span>
+    <span class="tag">TF-IDF + NMF</span>
+    <span class="tag">sentence-transformers</span>
+    <span class="tag">UMAP</span>
+    <span class="tag">HDBSCAN</span>
+    <span class="tag">D3.js v7</span>
+    <span class="tag">NetworkX</span>
+  </div>
+</footer>
+
+<!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

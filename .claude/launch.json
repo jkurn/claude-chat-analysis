@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mind-map",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "web", "-p", "3001", "--cors"],
+      "port": 3001
+    }
+  ]
+}
