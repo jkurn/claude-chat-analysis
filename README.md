@@ -1,5 +1,7 @@
 # Inside the Machine Mind
 
+Access the page here: https://jkurn.github.io/claude-chat-analysis/
+
 A [Pudding.cool](https://pudding.cool)-style scrollytelling data visualization analyzing **21 months of Claude conversations** — 2,098 conversations, 13,690 messages, and 7 million+ words of dialogue.
 
 Built as a data science exploration combining NLP topic modeling, dimensionality reduction, clustering, and knowledge graph extraction into an interactive, dark-themed web experience.
