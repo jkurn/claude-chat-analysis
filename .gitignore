@@ -3,8 +3,8 @@ conversations.json
 projects.json
 users.json
 
-# Generated data (reproducible via `npm run process`)
-web/data/
+# Generated binary (not needed by frontend)
+web/data/embeddings.npy
 
 # Node
 node_modules/
