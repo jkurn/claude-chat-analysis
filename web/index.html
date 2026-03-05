@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mind Map — Analyzing 21 Months of Claude Conversations</title>
+  <title>Inside the Machine Mind — A Map of Your Intellectual World</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
@@ -11,7 +11,7 @@
 <!-- Loading overlay -->
 <div id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">Rendering your mind map…</div>
+  <div class="loading-text">Mapping your mind…</div>
 </div>
 
 <!-- Progress bar -->
@@ -19,54 +19,56 @@
 
 <!-- Navigation -->
 <nav id="nav">
-  <div class="logo">
-    <span>◆</span> mind.map
-  </div>
+  <div class="logo"><span>◆</span> mind.map</div>
   <ul id="nav-links">
     <li><a href="#hero">Overview</a></li>
-    <li><a href="#timeline">Timeline</a></li>
-    <li><a href="#activity">Activity</a></li>
-    <li><a href="#topics">Topics</a></li>
-    <li><a href="#umap-section">Galaxy</a></li>
+    <li><a href="#landscape">Landscape</a></li>
+    <li><a href="#obsessions">Obsessions</a></li>
+    <li><a href="#library">Library</a></li>
+    <li><a href="#dual-life">Fingerprint</a></li>
+    <li><a href="#threads">Threads</a></li>
+    <li><a href="#meta-cognitive">Mirror</a></li>
     <li><a href="#graph-section">Network</a></li>
   </ul>
 </nav>
 
-<!-- ── SECTION 1: Hero ─────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 1: HERO
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <section id="hero">
   <div class="section-inner">
     <div class="hero-eyebrow">// A data science exploration</div>
     <h1>Inside the<br/><em>Machine Mind</em></h1>
     <p class="hero-sub">
-      21 months. 2,098 conversations. 7 million words.
-      An analysis of everything Jonathan asked Claude — and what it reveals
-      about how we think, work, and explore ideas with AI.
+      2,098 conversations. 7 million words. 21 months.
+      This is not a chatbot history — it's a map of intellectual obsession,
+      from business strategy to personal identity, from Naval Ravikant to Feng Shui.
     </p>
 
     <div class="hero-stats" id="hero-stats">
       <div class="stat-card" style="--accent-line: #7c6bff">
-        <div class="stat-value" data-target="2098" data-prefix="">0</div>
+        <div class="stat-value" data-target="2098">0</div>
         <div class="stat-label">Conversations</div>
       </div>
       <div class="stat-card" style="--accent-line: #ff6b9d">
-        <div class="stat-value" data-target="13690" data-prefix="">0</div>
+        <div class="stat-value" data-target="13690">0</div>
         <div class="stat-label">Messages exchanged</div>
       </div>
       <div class="stat-card" style="--accent-line: #6bffd3">
-        <div class="stat-value" data-target="7" data-suffix="M+" data-prefix="">0</div>
+        <div class="stat-value" data-target="7" data-suffix="M+">0</div>
         <div class="stat-label">Words of dialogue</div>
       </div>
       <div class="stat-card" style="--accent-line: #ffcc6b">
-        <div class="stat-value" data-target="91" data-prefix="">0</div>
-        <div class="stat-label">Active projects</div>
+        <div class="stat-value" data-target="18">0</div>
+        <div class="stat-label">Latent topics discovered</div>
       </div>
       <div class="stat-card" style="--accent-line: #a855f7">
-        <div class="stat-value" data-target="414" data-prefix="">0</div>
-        <div class="stat-label">Active days</div>
+        <div class="stat-value" data-target="26">0</div>
+        <div class="stat-label">Recurring threads</div>
       </div>
       <div class="stat-card" style="--accent-line: #22c55e">
-        <div class="stat-value" data-target="489" data-prefix="">0</div>
-        <div class="stat-label">Code conversations</div>
+        <div class="stat-value" data-target="92" data-suffix="%">0</div>
+        <div class="stat-label">Your own words</div>
       </div>
     </div>
   </div>
@@ -77,149 +79,230 @@
   </div>
 </section>
 
-<!-- ── SECTION 2: Timeline ─────────────────────────────────────────────── -->
-<section id="timeline">
-  <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="eyebrow">// 01 — Behavioral Lens</div>
-      <h2>The Rhythm of Curiosity</h2>
-      <p>
-        Every dot is a day. Every spike is a burst of exploration.
-        The calendar never lies — here's when the thinking happened.
-      </p>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 2: THE LANDSCAPE OF YOUR MIND (UMAP Galaxy — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="landscape" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="landscape-vis">
+      <svg id="landscape-svg"></svg>
     </div>
-
-    <div class="chart-wrap reveal">
-      <h3>Daily Conversation Activity — Jun 2024 to Mar 2026</h3>
-      <div id="heatmap-container"></div>
-      <div class="heatmap-legend">
-        <span>Less</span>
-        <div class="heatmap-legend-gradient" id="heatmap-legend-boxes"></div>
-        <span>More</span>
-      </div>
+    <div id="landscape-legend" class="chart-legend"></div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>2,098 conversations. One galaxy.</h3>
+      <p>Every dot is a conversation. Position encodes semantic similarity — conversations about related ideas cluster together, forming a topography of curiosity.</p>
     </div>
-
-    <div class="chart-wrap reveal" style="margin-top: 1.5rem">
-      <div class="chart-title-row">
-        <h3>Conversations per Month</h3>
-        <span class="label">Line chart</span>
-      </div>
-      <div id="monthly-chart"></div>
+    <div class="step" data-step="1">
+      <h3>Color reveals the intellectual terrain</h3>
+      <p>18 NMF topics emerge from TF-IDF analysis. Each color is a domain of thought — strategy, identity, code, culture, reading.</p>
     </div>
-
-    <div class="insight-box reveal">
-      <p>
-        The data reveals clear intellectual "seasons" — dense clusters of activity
-        punctuated by quieter periods. Peaks often correspond to project sprints,
-        new interests, or knowledge deep-dives.
-      </p>
-      <div class="source">→ derived from 2,098 timestamped conversations</div>
+    <div class="step" data-step="2">
+      <h3>201 conversations about the inner life</h3>
+      <p>Confidence, worthiness, finding "enough." Personal coaching sessions about overthinking, anxiety, and intentional growth — sitting right next to the business ambition.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>128 books processed through dialogue</h3>
+      <p>Naval Ravikant, Cialdini, Keith Johnstone's Impro, The Looming Tower. A library built not by reading alone, but by mining each book through conversation.</p>
+    </div>
+    <div class="step" data-step="4">
+      <h3>The builder's corner: from thinking to shipping</h3>
+      <p>AI agents, product development, web applications, code documentation. 357 conversations about turning abstract ideas into working systems.</p>
+    </div>
+    <div class="step" data-step="5">
+      <h3>The full landscape of one mind</h3>
+      <p>18 topics. 21 months. A mind oscillating between building businesses, processing books, navigating identity, and making sense of a life that spans Jakarta to Dubai to Silicon Valley.</p>
     </div>
   </div>
 </section>
 
-<!-- ── SECTION 3: Activity Patterns ───────────────────────────────────── -->
-<section id="activity">
-  <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="eyebrow">// 02 — Behavioral Lens</div>
-      <h2>When the Mind is Most Active</h2>
-      <p>
-        What time of day do you reach for Claude? Which days ignite the most conversations?
-        Your usage patterns reveal your cognitive rhythms.
-      </p>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 3: THE OBSESSIONS (Depth Analysis — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="obsessions" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="obsessions-vis">
+      <svg id="obsessions-svg"></svg>
     </div>
-
-    <div class="chart-wrap reveal">
-      <h3>Conversations by Hour × Day of Week</h3>
-      <div id="activity-heatmap"></div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>Not all topics are created equal</h3>
+      <p>Obsession score combines frequency, depth, and persistence over time. Some topics you skim. Some you can't let go of.</p>
     </div>
-
-    <div class="grid-2 reveal">
-      <div class="chart-wrap">
-        <h3>Hour of Day</h3>
-        <div id="hour-chart"></div>
-      </div>
-      <div class="chart-wrap">
-        <h3>Day of Week</h3>
-        <div id="weekday-chart"></div>
-      </div>
+    <div class="step" data-step="1">
+      <h3>Your deepest obsession isn't business — it's personal growth</h3>
+      <p>Conversations & Dialogue leads at 337.7 — personal coaching sessions sustained across 21 months. Business Strategy comes second at 293.2.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>Career & Job Search: few conversations, maximum depth</h3>
+      <p>Only 20 conversations, but each averages 9.4 turns with the highest depth score of any topic (94.4). When it matters, you go all in.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>Quick lookups vs. deep dives</h3>
+      <p>35% of conversations are quick lookups (2 turns). 48% are focused exchanges. But the ratio varies wildly by topic — Career is almost all deep dives.</p>
     </div>
   </div>
 </section>
 
-<!-- ── SECTION 4: Distributions ───────────────────────────────────────── -->
-<section id="distributions">
-  <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="eyebrow">// 03 — Behavioral Lens</div>
-      <h2>Anatomy of a Conversation</h2>
-      <p>
-        How deep do conversations go? How much do you write vs. how much does Claude respond?
-        The shape of dialogue reveals thinking style.
-      </p>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 4: THE LIBRARY (Reading Conversations — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="library" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="library-vis">
+      <svg id="library-svg"></svg>
     </div>
-
-    <div class="grid-2 reveal">
-      <div class="chart-wrap">
-        <h3>Turn Count Distribution</h3>
-        <div id="turn-chart"></div>
-      </div>
-      <div class="chart-wrap">
-        <h3>Message Length: Human vs Claude</h3>
-        <div id="msg-len-chart"></div>
-      </div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>128 books processed through AI dialogue</h3>
+      <p>More books processed through conversation than most people read in a decade. Each dot is a reading session — some spanning 60+ messages.</p>
     </div>
-
-    <div class="chart-wrap reveal">
-      <h3>Top 20 Deepest Conversations (by message count)</h3>
-      <div id="top-convs-chart"></div>
+    <div class="step" data-step="1">
+      <h3>Philosophy meets persuasion meets improvisation</h3>
+      <p>Five Pillars of Lasting Wealth. Cialdini's Influence. Keith Johnstone's Impro. The breadth reveals a pattern: the search for frameworks that work.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>The extraction method: scratchpad to essence</h3>
+      <p>The pattern is consistent — start with raw observations, then extract key ideas, then synthesize the essence. Not just reading. Mining.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>Reading feeds everything</h3>
+      <p>The strongest bridge: Reading ↔ Business Strategy (81 shared conversations). Books aren't consumed in isolation — they're immediately applied.</p>
     </div>
   </div>
 </section>
 
-<!-- ── SECTION 5: Topics ───────────────────────────────────────────────── -->
-<section id="topics">
-  <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="eyebrow">// 04 — Topographical Lens</div>
-      <h2>The Landscape of Your Mind</h2>
-      <p>
-        TF-IDF + NMF topic modeling extracted 18 latent themes from 2,098 conversations.
-        Each theme is a territory in your intellectual world.
-      </p>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 5: THE DUAL LIFE (Intellectual Fingerprint — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="dual-life" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="duallife-vis">
+      <svg id="duallife-svg"></svg>
     </div>
-
-    <div class="topic-grid reveal" id="topic-grid"></div>
-
-    <div class="chart-wrap reveal" id="topic-stream-wrap">
-      <div class="chart-title-row">
-        <h3>Topic Evolution Over Time</h3>
-        <span class="label">Stacked Area</span>
-      </div>
-      <div id="topic-stream-chart"></div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>Your intellectual fingerprint</h3>
+      <p>Six dimensions of thinking, computed from conversation volume weighted by depth. Strategizing dominates — but not by as much as you'd think.</p>
     </div>
-
-    <div class="chart-wrap reveal">
-      <div class="chart-title-row">
-        <h3>Bubble Chart — Topics by Conversation Volume</h3>
-        <span class="label">Force Layout</span>
-      </div>
-      <div id="topic-bubble-chart"></div>
+    <div class="step" data-step="1">
+      <h3>The inner life, invisible to the outside</h3>
+      <p>Reflecting scores 60.3 — 201 conversations about confidence, worthiness, health, and meaning. "Overthinking Fuels Anxiety and Misery" lives here.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>The external ambition</h3>
+      <p>Strategizing at 100 — 452 conversations about business, data governance, and marketing. "Exponential Income Growth" and "Oracle's Enterprise Database Strategy."</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>The duality: ambition and vulnerability, side by side</h3>
+      <p>The strongest cross-topic bridge: Conversations & Dialogue ↔ Business Strategy (129 shared conversations). The inner and outer worlds aren't separate — they inform each other.</p>
     </div>
   </div>
 </section>
 
-<!-- ── SECTION 6: UMAP Galaxy ─────────────────────────────────────────── -->
-<section id="umap-section">
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 6: UNFINISHED THREADS (Recurring Conversations — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="threads" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="threads-vis">
+      <svg id="threads-svg"></svg>
+    </div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>Some ideas keep coming back</h3>
+      <p>26 recurring threads detected — clusters of semantically similar conversations spanning weeks or months. These are the ideas you've revisited again and again.</p>
+    </div>
+    <div class="step" data-step="1">
+      <h3>4 threads are still open</h3>
+      <p>Active within the last 90 days. These are the unresolved questions — the ideas still being worked through.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>Some deepen, some fade</h3>
+      <p>Deepening threads show increasing engagement over time. Fading threads show declining turns. The pattern reveals which ideas sustain interest and which are abandoned.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>The most persistent threads</h3>
+      <p>The largest thread spans 599 days with 185 conversations. Dubai Government Digital spans 180 days with 52 conversations. AI Agents deepens across 611 days.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 7: META-COGNITIVE MIRROR (How You Think — Sticky Scroll)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="meta-cognitive" class="scroll-section">
+  <div class="scroll-section__chart">
+    <div id="metacog-vis">
+      <svg id="metacog-svg"></svg>
+    </div>
+  </div>
+  <div class="scroll-section__steps">
+    <div class="step active" data-step="0">
+      <h3>How do you start a conversation with AI?</h3>
+      <p>48% of conversations start with a context paste — dumping text for Claude to process. 28% start with a question. Only 8% are direct commands.</p>
+    </div>
+    <div class="step" data-step="1">
+      <h3>92% of your input is genuinely your own words</h3>
+      <p>Only 7.9% of human text shows AI-pasted patterns (markdown headers, formal structure, "Certainly" starts). This is a thinking partnership, not a copy-paste machine.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>70% exploring, 19% building, 8% processing</h3>
+      <p>When it's your words, you're overwhelmingly in exploration mode — asking questions, seeking understanding. Building and processing follow.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>The vulnerability beneath the ambition</h3>
+      <p>Reflecting and struggling messages cluster around personal topics and late-night hours. Building messages peak during business hours. The emotional texture shifts with the clock.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 8: THE WEB OF IDEAS (Knowledge Graph — Interactive Bowl)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="graph-section">
   <div class="section-inner">
     <div class="section-header reveal">
-      <div class="eyebrow">// 05 — Topographical Lens</div>
-      <h2>Your Knowledge Galaxy</h2>
+      <div class="eyebrow">// Interactive — Zoom, drag, click</div>
+      <h2>The Web of Ideas</h2>
       <p>
-        Every dot is a conversation. Position encodes semantic similarity — conversations
-        about related ideas cluster together. Generated using sentence embeddings
-        (all-MiniLM-L6-v2) → UMAP → HDBSCAN.
+        The most central concept? "Analysis" — appearing in 1,285 conversations.
+        Its strongest connection: "Framework" (weight 800). You think about thinking.
+      </p>
+    </div>
+
+    <div class="category-pills reveal" id="category-pills"></div>
+
+    <div id="graph-container" class="reveal">
+      <svg id="graph-svg"></svg>
+      <div id="graph-tooltip"></div>
+      <div class="graph-controls">
+        <button class="graph-btn" id="graph-zoom-in" title="Zoom in">+</button>
+        <button class="graph-btn" id="graph-zoom-out" title="Zoom out">−</button>
+        <button class="graph-btn" id="graph-reset" title="Reset">⌂</button>
+      </div>
+    </div>
+
+    <div class="cluster-legend" id="graph-legend"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 9: EXPLORE EVERYTHING (Interactive UMAP — Bowl)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="explore-section">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="eyebrow">// Interactive — Search, filter, click</div>
+      <h2>Explore the Galaxy</h2>
+      <p>
+        All 2,098 conversations in one interactive view.
+        Click any dot to see its name, topic, and depth. Use the controls to filter and color.
       </p>
     </div>
 
@@ -243,38 +326,11 @@
   </div>
 </section>
 
-<!-- ── SECTION 7: Knowledge Graph ─────────────────────────────────────── -->
-<section id="graph-section">
-  <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="eyebrow">// 06 — Relationship Lens</div>
-      <h2>The Web of Ideas</h2>
-      <p>
-        Which concepts co-appear across conversations? Stronger connections indicate
-        concepts Jonathan frequently explores <em>together</em>.
-        Node size reflects frequency; edge thickness reflects co-occurrence.
-      </p>
-    </div>
-
-    <div class="category-pills reveal" id="category-pills"></div>
-
-    <div id="graph-container" class="reveal">
-      <svg id="graph-svg"></svg>
-      <div id="graph-tooltip"></div>
-      <div class="graph-controls">
-        <button class="graph-btn" id="graph-zoom-in" title="Zoom in">+</button>
-        <button class="graph-btn" id="graph-zoom-out" title="Zoom out">−</button>
-        <button class="graph-btn" id="graph-reset" title="Reset">⌂</button>
-      </div>
-    </div>
-
-    <div class="cluster-legend" id="graph-legend"></div>
-  </div>
-</section>
-
-<!-- ── Footer ──────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <footer>
-  <p>A data science project analyzing Claude conversation exports</p>
+  <p>A data science exploration of Claude conversation exports</p>
   <p style="margin-top: 0.5rem">Jonathan Kurniawan · 2026</p>
   <div class="tech-stack">
     <span class="tag">Python</span>
@@ -287,7 +343,7 @@
   </div>
 </footer>
 
-<!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -4,7 +4,7 @@
   "description": "Data visualization of Claude conversation exports",
   "scripts": {
     "serve": "npx serve web -p 3001 --cors",
-    "process": "python3.11 scripts/01_preprocess.py && python3.11 scripts/02_topics.py && python3.11 scripts/03_embeddings.py && python3.11 scripts/04_knowledge_graph.py",
+    "process": "python3.11 scripts/01_preprocess.py && python3.11 scripts/02_topics.py && python3.11 scripts/03_embeddings.py && python3.11 scripts/04_knowledge_graph.py && python3.11 scripts/05_insights.py",
     "dev": "npx serve web -p 3001"
   }
 }

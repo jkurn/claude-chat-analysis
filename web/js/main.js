@@ -1,1256 +1,1391 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   Mind Map — Main JS
-   D3.js v7 visualizations for Claude chat analysis
+   Inside the Machine Mind — Scrollytelling D3.js Visualizations
    ─────────────────────────────────────────────────────────────────────────── */
 
 'use strict';
 
-// ── Globals ──────────────────────────────────────────────────────────────────
 const DATA = {};
-const TOPIC_COLORS_FALLBACK = [
+const STATE = {};
+
+const TOPIC_COLORS = [
   "#6366f1","#8b5cf6","#a855f7","#ec4899","#f43f5e",
   "#f97316","#f59e0b","#eab308","#84cc16","#22c55e",
   "#10b981","#14b8a6","#06b6d4","#0ea5e9","#3b82f6",
   "#6366f1","#d946ef","#fb7185"
 ];
 
-// ── Load all data ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════════════════════════
+
 async function loadData() {
   const files = [
-    'data/stats.json',
-    'data/timeline.json',
-    'data/activity.json',
-    'data/distributions.json',
-    'data/topics.json',
-    'data/topic_evolution.json',
-    'data/umap.json',
-    'data/graph.json',
-    'data/top_conversations.json',
+    'data/stats.json', 'data/topics.json', 'data/umap.json',
+    'data/graph.json', 'data/insights.json',
   ];
-
-  const results = await Promise.all(files.map(f =>
-    fetch(f).then(r => r.json()).catch(() => null)
-  ));
-
-  DATA.stats         = results[0];
-  DATA.timeline      = results[1];
-  DATA.activity      = results[2];
-  DATA.distributions = results[3];
-  DATA.topics        = results[4];
-  DATA.topicEvol     = results[5];
-  DATA.umap          = results[6];
-  DATA.graph         = results[7];
-  DATA.topConvs      = results[8];
+  const results = await Promise.all(
+    files.map(f => fetch(f).then(r => r.json()).catch(() => null))
+  );
+  DATA.stats    = results[0];
+  DATA.topics   = results[1];
+  DATA.umap     = results[2];
+  DATA.graph    = results[3];
+  DATA.insights = results[4];
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-async function init() {
-  await loadData();
-  document.getElementById('loading').classList.add('hidden');
+// ═══════════════════════════════════════════════════════════════════════════
+// SCROLL SYSTEM (IntersectionObserver on .step elements)
+// ═══════════════════════════════════════════════════════════════════════════
 
-  setupNav();
-  setupProgress();
-  setupReveal();
-  animateCounters();
-  renderCalendarHeatmap();
-  renderMonthlyLine();
-  renderActivityHeatmap();
-  renderHourChart();
-  renderWeekdayChart();
-  renderTurnDist();
-  renderMsgLenChart();
-  renderTopConvs();
-  renderTopicGrid();
-  renderTopicStream();
-  renderTopicBubbles();
-  renderUMAP();
-  renderGraph();
-}
+function setupScrollama() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const step = entry.target;
+      const section = step.closest('.scroll-section');
+      if (!section) return;
+      const sectionId = section.id;
+      const stepIndex = parseInt(step.dataset.step);
 
-// ── Nav scroll effect ────────────────────────────────────────────────────────
-function setupNav() {
-  const nav = document.getElementById('nav');
-  window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 20);
-  }, { passive: true });
+      // Activate step card visually
+      section.querySelectorAll('.step').forEach(s =>
+        s.classList.toggle('active', s === step)
+      );
 
-  // Active nav link
-  const sections = document.querySelectorAll('section[id]');
-  const links = document.querySelectorAll('#nav-links a');
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        links.forEach(l => l.classList.remove('active'));
-        const match = document.querySelector(`#nav-links a[href="#${e.target.id}"]`);
-        if (match) match.classList.add('active');
-      }
+      // Dispatch to section handler
+      handleStepEnter(sectionId, stepIndex);
     });
-  }, { threshold: 0.3 });
-  sections.forEach(s => observer.observe(s));
+  }, { threshold: 0.5, rootMargin: '-10% 0px -10% 0px' });
+
+  document.querySelectorAll('.step').forEach(el => observer.observe(el));
 }
 
-// ── Progress bar ─────────────────────────────────────────────────────────────
-function setupProgress() {
-  const bar = document.getElementById('progress-bar');
-  window.addEventListener('scroll', () => {
-    const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
-    bar.style.width = pct + '%';
-  }, { passive: true });
+function handleStepEnter(sectionId, stepIndex) {
+  const prev = STATE[sectionId + '_step'];
+  if (prev === stepIndex) return;
+  STATE[sectionId + '_step'] = stepIndex;
+
+  switch (sectionId) {
+    case 'landscape':     updateLandscapeStep(stepIndex); break;
+    case 'obsessions':    updateObsessionsStep(stepIndex); break;
+    case 'library':       updateLibraryStep(stepIndex); break;
+    case 'dual-life':     updateDualLifeStep(stepIndex); break;
+    case 'threads':       updateThreadsStep(stepIndex); break;
+    case 'meta-cognitive': updateMetaCogStep(stepIndex); break;
+  }
 }
 
-// ── Reveal on scroll ─────────────────────────────────────────────────────────
-function setupReveal() {
-  const els = document.querySelectorAll('.reveal');
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
-    });
-  }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
-  els.forEach(el => obs.observe(el));
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 1: HERO — Animated Counters
+// ═══════════════════════════════════════════════════════════════════════════
 
-// ── Counter animation ─────────────────────────────────────────────────────────
 function animateCounters() {
-  const cards = document.querySelectorAll('[data-target]');
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      const el = e.target;
-      const target = +el.dataset.target;
-      const prefix = el.dataset.prefix || '';
-      const suffix = el.dataset.suffix || '';
-      const duration = 1400;
-      const start = performance.now();
-      function tick(now) {
-        const p = Math.min((now - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - p, 3);
-        el.textContent = prefix + Math.round(target * ease).toLocaleString() + suffix;
-        if (p < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-      obs.unobserve(el);
-    });
-  }, { threshold: 0.5 });
-  cards.forEach(c => obs.observe(c));
-}
-
-// ── Color helpers ─────────────────────────────────────────────────────────────
-function getTopicColor(id) {
-  if (id < 0) return '#4a4a5a';
-  if (!DATA.topics) return TOPIC_COLORS_FALLBACK[id % 18];
-  const t = DATA.topics.topics.find(t => t.id === id);
-  return t ? t.color : '#888';
-}
-function getTopicLabel(id) {
-  if (id < 0) return 'Misc / Short';
-  if (!DATA.topics) return `Topic ${id}`;
-  const t = DATA.topics.topics.find(t => t.id === id);
-  return t ? t.label : `Topic ${id}`;
-}
-
-// ── Responsive SVG dims ───────────────────────────────────────────────────────
-function dims(selector, margin = { top: 20, right: 20, bottom: 40, left: 50 }) {
-  const el = document.querySelector(selector);
-  const w = el.getBoundingClientRect().width || 600;
-  return {
-    margin,
-    outerW: w,
-    outerH: Math.min(w * 0.45, 340),
-    w: w - margin.left - margin.right,
-    h: Math.min(w * 0.45, 340) - margin.top - margin.bottom,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CALENDAR HEATMAP
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderCalendarHeatmap() {
-  if (!DATA.timeline) return;
-  const daily = DATA.timeline.daily;
-
-  const parseDate = d3.timeParse('%Y-%m-%d');
-  const data = daily.map(d => ({ date: parseDate(d.date), value: d.convs }));
-
-  const cellSize = 13;
-  const cellPad = 2;
-  const weekW = cellSize + cellPad;
-
-  // Group by year
-  const years = d3.groups(data, d => d.date.getFullYear());
-  const container = document.getElementById('heatmap-container');
-
-  // Color scale
-  const maxVal = d3.max(data, d => d.value);
-  const color = d3.scaleSequential()
-    .domain([0, maxVal])
-    .interpolator(d3.interpolateRgbBasis(['#1a1a26', '#4f46e5', '#7c6bff', '#c4b8ff']));
-
-  // Legend boxes
-  const legendEl = document.getElementById('heatmap-legend-boxes');
-  [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach(t => {
-    const box = document.createElement('div');
-    box.className = 'heatmap-legend-box';
-    box.style.background = color(t * maxVal);
-    legendEl.appendChild(box);
-  });
-
-  const dayNames = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
-  const monthFmt = d3.timeFormat('%b');
-
-  years.forEach(([year, yearData]) => {
-    // Number of weeks in year
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year, 11, 31);
-    const nWeeks = d3.timeWeeks(yearStart, d3.timeDay.offset(yearEnd, 1)).length;
-    const svgW = nWeeks * weekW + 40;
-    const svgH = 7 * weekW + 30;
-
-    const svg = d3.select(container)
-      .append('svg')
-      .attr('width', svgW)
-      .attr('height', svgH)
-      .attr('style', 'display: block; margin-bottom: 8px; min-width: ' + svgW + 'px');
-
-    // Year label
-    svg.append('text')
-      .attr('x', 28).attr('y', 12)
-      .attr('fill', '#6e6e8a')
-      .attr('font-size', '11px')
-      .attr('font-family', 'JetBrains Mono, monospace')
-      .text(year);
-
-    const g = svg.append('g').attr('transform', 'translate(40, 20)');
-
-    // Day labels
-    dayNames.forEach((name, i) => {
-      if (!name) return;
-      g.append('text')
-        .attr('x', -4).attr('y', i * weekW + cellSize / 2 + 2)
-        .attr('fill', '#3a3a55')
-        .attr('font-size', '9px')
-        .attr('text-anchor', 'end')
-        .attr('dominant-baseline', 'middle')
-        .attr('font-family', 'JetBrains Mono, monospace')
-        .text(name);
-    });
-
-    // Build value map
-    const fmt = d3.timeFormat('%Y-%m-%d');
-    const valMap = new Map(yearData.map(d => [fmt(d.date), d.value]));
-
-    // All days in year
-    const allDays = d3.timeDays(yearStart, d3.timeDay.offset(yearEnd, 1));
-
-    // Month labels
-    const monthStarts = d3.timeMonths(yearStart, d3.timeDay.offset(yearEnd, 1));
-    monthStarts.forEach(m => {
-      const weekIdx = d3.timeWeek.count(d3.timeYear(m), m);
-      g.append('text')
-        .attr('x', weekIdx * weekW + cellSize / 2)
-        .attr('y', -4)
-        .attr('fill', '#3a3a55')
-        .attr('font-size', '9px')
-        .attr('text-anchor', 'middle')
-        .attr('font-family', 'JetBrains Mono, monospace')
-        .text(monthFmt(m));
-    });
-
-    // Cells
-    const tooltip = createFloatingTooltip();
-    const dateFmtFull = d3.timeFormat('%B %d, %Y');
-
-    g.selectAll('rect')
-      .data(allDays)
-      .join('rect')
-      .attr('x', d => d3.timeWeek.count(d3.timeYear(d), d) * weekW)
-      .attr('y', d => d.getDay() * weekW)
-      .attr('width', cellSize).attr('height', cellSize)
-      .attr('rx', 2)
-      .attr('fill', d => {
-        const v = valMap.get(fmt(d)) || 0;
-        return v === 0 ? '#1a1a26' : color(v);
-      })
-      .on('mouseover', function(event, d) {
-        const v = valMap.get(fmt(d)) || 0;
-        tooltip.show(event, `<strong>${dateFmtFull(d)}</strong><br/>${v} conversation${v !== 1 ? 's' : ''}`);
-        d3.select(this).attr('rx', 4).attr('stroke', '#fff').attr('stroke-width', 0.5);
-      })
-      .on('mousemove', (e) => tooltip.move(e))
-      .on('mouseout', function() {
-        tooltip.hide();
-        d3.select(this).attr('rx', 2).attr('stroke', null);
-      });
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MONTHLY LINE CHART
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderMonthlyLine() {
-  if (!DATA.timeline) return;
-  const monthly = DATA.timeline.monthly;
-
-  const margin = { top: 20, right: 20, bottom: 50, left: 50 };
-  const el = document.getElementById('monthly-chart');
-  const W = el.getBoundingClientRect().width || 700;
-  const H = 220;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const parseMonth = d3.timeParse('%Y-%m');
-  const data = monthly.map(d => ({ date: parseMonth(d.month), convs: d.convs, msgs: d.msgs }));
-
-  const svg = d3.select(el).append('svg')
-    .attr('width', W).attr('height', H);
-
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const xScale = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, w]);
-  const yScale = d3.scaleLinear().domain([0, d3.max(data, d => d.convs) * 1.15]).range([h, 0]);
-
-  // Gradient
-  const gradId = 'monthly-grad';
-  const defs = svg.append('defs');
-  const grad = defs.append('linearGradient').attr('id', gradId).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
-  grad.append('stop').attr('offset', '0%').attr('stop-color', '#7c6bff').attr('stop-opacity', 0.4);
-  grad.append('stop').attr('offset', '100%').attr('stop-color', '#7c6bff').attr('stop-opacity', 0);
-
-  // Area
-  const area = d3.area().x(d => xScale(d.date)).y0(h).y1(d => yScale(d.convs)).curve(d3.curveCatmullRom);
-  const line = d3.line().x(d => xScale(d.date)).y(d => yScale(d.convs)).curve(d3.curveCatmullRom);
-
-  g.append('path').datum(data).attr('fill', `url(#${gradId})`).attr('d', area);
-  g.append('path').datum(data).attr('fill', 'none').attr('stroke', '#7c6bff').attr('stroke-width', 2).attr('d', line);
-
-  // Axes
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(xScale).ticks(d3.timeMonth.every(2)).tickFormat(d3.timeFormat('%b %y')))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 10).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('g')
-    .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => d > 0 ? d : ''))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 10).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'))
-    .call(g => g.selectAll('.tick line').clone().attr('x2', w).attr('stroke', 'rgba(255,255,255,0.04)'));
-
-  // Peak annotation
-  const peakPoint = data.reduce((a, b) => a.convs > b.convs ? a : b);
-  const peakX = xScale(peakPoint.date);
-  const peakY = yScale(peakPoint.convs);
-  g.append('line')
-    .attr('x1', peakX).attr('x2', peakX)
-    .attr('y1', peakY + 4).attr('y2', h)
-    .attr('stroke', '#7c6bff').attr('stroke-width', 1)
-    .attr('stroke-dasharray', '3,3').attr('opacity', 0.5);
-  g.append('text')
-    .attr('x', peakX + 5).attr('y', peakY - 6)
-    .attr('fill', '#c4b8ff').attr('font-size', '10px')
-    .attr('font-family', 'JetBrains Mono, monospace')
-    .text(`Peak: ${peakPoint.convs} convs`);
-
-  // Dots + tooltip
-  const tooltip = createFloatingTooltip();
-  const fmtMonth = d3.timeFormat('%b %Y');
-
-  g.selectAll('circle').data(data).join('circle')
-    .attr('cx', d => xScale(d.date)).attr('cy', d => yScale(d.convs))
-    .attr('r', 3.5).attr('fill', '#7c6bff').attr('stroke', '#0a0a0f').attr('stroke-width', 1.5)
-    .on('mouseover', (event, d) => {
-      tooltip.show(event, `<strong>${fmtMonth(d.date)}</strong><br/>${d.convs} conversations`);
-    })
-    .on('mousemove', e => tooltip.move(e))
-    .on('mouseout', () => tooltip.hide());
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ACTIVITY HEATMAP (Hour × Weekday)
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderActivityHeatmap() {
-  if (!DATA.activity) return;
-  const heatmapData = DATA.activity.heatmap;
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  const margin = { top: 20, right: 20, bottom: 50, left: 50 };
-  const el = document.getElementById('activity-heatmap');
-  const W = el.getBoundingClientRect().width || 700;
-  const cellW = Math.floor((W - margin.left - margin.right) / 24);
-  const cellH = 30;
-  const H = days.length * cellH + margin.top + margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const maxVal = d3.max(heatmapData, d => d.count);
-  const color = d3.scaleSequential()
-    .domain([0, maxVal])
-    .interpolator(d3.interpolateRgbBasis(['#1a1a26', '#2563eb', '#7c6bff', '#c084fc']));
-
-  const tooltip = createFloatingTooltip();
-  const periodLabel = h => {
-    if (h < 6) return 'Late night';
-    if (h < 12) return 'Morning';
-    if (h < 17) return 'Afternoon';
-    if (h < 21) return 'Evening';
-    return 'Night';
-  };
-
-  // Cells
-  g.selectAll('rect').data(heatmapData).join('rect')
-    .attr('x', d => d.hour * cellW)
-    .attr('y', d => d.weekday * cellH)
-    .attr('width', cellW - 2)
-    .attr('height', cellH - 2)
-    .attr('rx', 3)
-    .attr('fill', d => d.count === 0 ? '#1a1a26' : color(d.count))
-    .on('mouseover', (event, d) => {
-      tooltip.show(event,
-        `<strong>${days[d.weekday]} ${String(d.hour).padStart(2,'0')}:00</strong><br/>
-         ${d.count} conversations<br/>
-         <span style="color:#7c6bff">${periodLabel(d.hour)}</span>`);
-    })
-    .on('mousemove', e => tooltip.move(e))
-    .on('mouseout', () => tooltip.hide());
-
-  // Y axis (days)
-  days.forEach((day, i) => {
-    g.append('text')
-      .attr('x', -6).attr('y', i * cellH + cellH / 2 - 1)
-      .attr('fill', '#6e6e8a').attr('font-size', '10px')
-      .attr('font-family', 'JetBrains Mono, monospace')
-      .attr('text-anchor', 'end').attr('dominant-baseline', 'middle')
-      .text(day);
-  });
-
-  // X axis (hours) — every 6
-  [0, 6, 12, 18, 23].forEach(h => {
-    g.append('text')
-      .attr('x', h * cellW + cellW / 2).attr('y', days.length * cellH + 14)
-      .attr('fill', '#6e6e8a').attr('font-size', '10px')
-      .attr('font-family', 'JetBrains Mono, monospace')
-      .attr('text-anchor', 'middle')
-      .text(h === 0 ? '12am' : h === 12 ? '12pm' : h === 23 ? '11pm' : `${h > 12 ? h-12 : h}${h >= 12 ? 'pm' : 'am'}`);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HOUR / WEEKDAY BAR CHARTS
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderHourChart() {
-  if (!DATA.activity) return;
-  const data = DATA.activity.hourly;
-
-  const margin = { top: 10, right: 10, bottom: 30, left: 35 };
-  const el = document.getElementById('hour-chart');
-  const W = el.getBoundingClientRect().width || 300;
-  const H = 160;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const x = d3.scaleBand().domain(data.map(d => d.hour)).range([0, w]).padding(0.15);
-  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count) * 1.1]).range([h, 0]);
-
-  const color = d3.scaleSequential().domain([0, 23])
-    .interpolator(t => d3.interpolateTurbo(0.15 + t * 0.7));
-
-  g.selectAll('rect').data(data).join('rect')
-    .attr('x', d => x(d.hour)).attr('y', d => y(d.count))
-    .attr('width', x.bandwidth()).attr('height', d => h - y(d.count))
-    .attr('fill', d => color(d.hour)).attr('rx', 2).attr('opacity', 0.85);
-
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(x).tickValues([0,6,12,18,23]).tickFormat(h => `${h}h`))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('g').call(d3.axisLeft(y).ticks(4))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-}
-
-function renderWeekdayChart() {
-  if (!DATA.activity) return;
-  const data = DATA.activity.weekday;
-
-  const margin = { top: 10, right: 10, bottom: 30, left: 35 };
-  const el = document.getElementById('weekday-chart');
-  const W = el.getBoundingClientRect().width || 300;
-  const H = 160;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const x = d3.scaleBand().domain(data.map(d => d.day)).range([0, w]).padding(0.2);
-  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count) * 1.1]).range([h, 0]);
-
-  const palette = ['#6366f1','#7c6bff','#a78bfa','#c084fc','#ec4899','#fb7185','#f43f5e'];
-
-  g.selectAll('rect').data(data).join('rect')
-    .attr('x', d => x(d.day)).attr('y', d => y(d.count))
-    .attr('width', x.bandwidth()).attr('height', d => h - y(d.count))
-    .attr('fill', (d, i) => palette[i]).attr('rx', 2).attr('opacity', 0.85);
-
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(x))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('g').call(d3.axisLeft(y).ticks(4))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TURN DISTRIBUTION
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderTurnDist() {
-  if (!DATA.distributions) return;
-  const raw = DATA.distributions.turn_distribution;
-  // Filter to < 40 turns for readability
-  const data = raw.filter(d => d.turns <= 40);
-
-  const margin = { top: 15, right: 15, bottom: 40, left: 50 };
-  const el = document.getElementById('turn-chart');
-  const W = el.getBoundingClientRect().width || 300;
-  const H = 200;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const x = d3.scaleBand().domain(data.map(d => d.turns)).range([0, w]).padding(0.1);
-  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count) * 1.1]).range([h, 0]);
-
-  const colorScale = d3.scaleSequential().domain([1, 40])
-    .interpolator(d3.interpolateRgbBasis(['#6bffd3', '#7c6bff', '#ff6b9d']));
-
-  const tooltip = createFloatingTooltip();
-
-  g.selectAll('rect').data(data).join('rect')
-    .attr('x', d => x(d.turns)).attr('y', d => y(d.count))
-    .attr('width', x.bandwidth()).attr('height', d => h - y(d.count))
-    .attr('fill', d => colorScale(d.turns)).attr('rx', 1)
-    .on('mouseover', (event, d) => {
-      tooltip.show(event, `<strong>${d.turns} turns</strong><br/>${d.count} conversations`);
-    })
-    .on('mousemove', e => tooltip.move(e))
-    .on('mouseout', () => tooltip.hide());
-
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(x).tickValues([1,5,10,15,20,30,40]).tickFormat(d => d))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('g').call(d3.axisLeft(y).ticks(4))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'))
-    .call(g => g.selectAll('.tick line').clone().attr('x2', w).attr('stroke', 'rgba(255,255,255,0.04)'));
-
-  // X label
-  g.append('text').attr('x', w/2).attr('y', h + 35)
-    .attr('fill', '#6e6e8a').attr('font-size', 10).attr('text-anchor', 'middle')
-    .text('Number of messages in conversation');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MESSAGE LENGTH CHART
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderMsgLenChart() {
-  if (!DATA.distributions) return;
-  const humanData = DATA.distributions.msg_len_human;
-  const assistData = DATA.distributions.msg_len_assistant;
-
-  const margin = { top: 15, right: 15, bottom: 50, left: 50 };
-  const el = document.getElementById('msg-len-chart');
-  const W = el.getBoundingClientRect().width || 300;
-  const H = 220;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const combined = [...humanData, ...assistData];
-  const maxX = d3.max(combined, d => d.bin_start);
-  const maxY = d3.max(combined, d => d.count);
-
-  const x = d3.scaleLinear().domain([0, maxX]).range([0, w]);
-  const y = d3.scaleLinear().domain([0, maxY * 1.1]).range([h, 0]);
-
-  const areaFn = (dataset, fill) => {
-    const area = d3.area()
-      .x(d => x(d.bin_start))
-      .y0(h).y1(d => y(d.count))
-      .curve(d3.curveBasis);
-    g.append('path').datum(dataset).attr('fill', fill).attr('opacity', 0.35).attr('d', area);
-
-    const lineFn = d3.line().x(d => x(d.bin_start)).y(d => y(d.count)).curve(d3.curveBasis);
-    g.append('path').datum(dataset).attr('fill', 'none').attr('stroke', fill)
-      .attr('stroke-width', 1.5).attr('d', lineFn);
-  };
-
-  areaFn(humanData, '#ff6b9d');
-  areaFn(assistData, '#7c6bff');
-
-  // Legend
-  [['Human', '#ff6b9d'], ['Claude', '#7c6bff']].forEach(([label, color], i) => {
-    const lx = w - 100 + i * 55;
-    g.append('rect').attr('x', lx).attr('y', 5).attr('width', 10).attr('height', 10).attr('fill', color).attr('opacity', 0.8).attr('rx', 2);
-    g.append('text').attr('x', lx + 13).attr('y', 14).attr('fill', '#6e6e8a').attr('font-size', 10).text(label);
-  });
-
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(d => d > 999 ? `${(d/1000).toFixed(0)}k` : d))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('g').call(d3.axisLeft(y).ticks(4))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 9).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-
-  g.append('text').attr('x', w/2).attr('y', h + 40)
-    .attr('fill', '#6e6e8a').attr('font-size', 10).attr('text-anchor', 'middle')
-    .text('Message length (characters)');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOP CONVERSATIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderTopConvs() {
-  if (!DATA.topConvs) return;
-  const data = DATA.topConvs.slice(0, 20);
-
-  const margin = { top: 10, right: 60, bottom: 10, left: 240 };
-  const el = document.getElementById('top-convs-chart');
-  const W = el.getBoundingClientRect().width || 700;
-  const barH = 28;
-  const H = data.length * barH + margin.top + margin.bottom;
-  const w = W - margin.left - margin.right;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const x = d3.scaleLinear().domain([0, d3.max(data, d => d.total_msgs)]).range([0, w]);
-  const y = d3.scaleBand().domain(data.map(d => d.uuid)).range([0, H - margin.top - margin.bottom]).padding(0.2);
-
-  const tooltip = createFloatingTooltip();
-
-  data.forEach((d, i) => {
-    const yPos = y(d.uuid);
-    const bColor = TOPIC_COLORS_FALLBACK[i % 18];
-
-    // Bar
-    g.append('rect')
-      .attr('x', 0).attr('y', yPos)
-      .attr('width', x(d.total_msgs)).attr('height', y.bandwidth())
-      .attr('fill', bColor).attr('opacity', 0.7).attr('rx', 3);
-
-    // Name (left)
-    const nameText = d.name || '(Untitled)';
-    g.append('text')
-      .attr('x', -8).attr('y', yPos + y.bandwidth() / 2)
-      .attr('fill', '#e8e8f0').attr('font-size', '11px')
-      .attr('text-anchor', 'end').attr('dominant-baseline', 'middle')
-      .text(nameText.length > 32 ? nameText.slice(0, 30) + '…' : nameText);
-
-    // Count (right)
-    g.append('text')
-      .attr('x', x(d.total_msgs) + 5).attr('y', yPos + y.bandwidth() / 2)
-      .attr('fill', bColor).attr('font-size', '10px')
-      .attr('font-family', 'JetBrains Mono, monospace')
-      .attr('dominant-baseline', 'middle')
-      .text(d.total_msgs);
-
-    // Hover target
-    g.append('rect')
-      .attr('x', -margin.left).attr('y', yPos)
-      .attr('width', W).attr('height', y.bandwidth())
-      .attr('fill', 'transparent')
-      .on('mouseover', (event) => {
-        tooltip.show(event,
-          `<strong>${d.name || '(Untitled)'}</strong><br/>
-          ${d.total_msgs} messages<br/>
-          ${Math.round(d.duration_min)} min duration<br/>
-          ${d.has_code ? '💻 Contains code' : ''}`);
-      })
-      .on('mousemove', e => tooltip.move(e))
-      .on('mouseout', () => tooltip.hide());
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOPIC GRID
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderTopicGrid() {
-  if (!DATA.topics) return;
-  const topics = [...DATA.topics.topics].sort((a, b) => b.doc_count - a.doc_count);
-
-  const grid = document.getElementById('topic-grid');
-  topics.forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'topic-card';
-    card.style.setProperty('--topic-color', t.color);
-    card.innerHTML = `
-      <div class="count">${t.doc_count}</div>
-      <div class="name">${t.label}</div>
-      <div class="words">${t.top_words.slice(0, 5).map(w => w[0]).join(' · ')}</div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOPIC STREAM CHART (Stacked Area)
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderTopicStream() {
-  if (!DATA.topicEvol) return;
-  const { data, months, n_topics } = DATA.topicEvol;
-
-  const margin = { top: 20, right: 20, bottom: 50, left: 50 };
-  const el = document.getElementById('topic-stream-chart');
-  const W = el.getBoundingClientRect().width || 700;
-  const H = 280;
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  const parseMonth = d3.timeParse('%Y-%m');
-  const parsedData = data.map(d => {
-    const row = { date: parseMonth(d.month) };
-    for (let t = 0; t < n_topics; t++) row[`t${t}`] = d[`t${t}`] || 0;
-    return row;
-  });
-
-  const keys = Array.from({ length: n_topics }, (_, i) => `t${i}`);
-  const stack = d3.stack().keys(keys).offset(d3.stackOffsetWiggle).order(d3.stackOrderInsideOut);
-  const series = stack(parsedData);
-
-  const xScale = d3.scaleTime().domain(d3.extent(parsedData, d => d.date)).range([0, w]);
-  const yScale = d3.scaleLinear()
-    .domain([d3.min(series, layer => d3.min(layer, d => d[0])),
-             d3.max(series, layer => d3.max(layer, d => d[1]))])
-    .range([h, 0]);
-
-  const area = d3.area()
-    .x(d => xScale(d.data.date))
-    .y0(d => yScale(d[0]))
-    .y1(d => yScale(d[1]))
-    .curve(d3.curveCatmullRom);
-
-  const tooltip = createFloatingTooltip();
-
-  g.selectAll('.stream-layer')
-    .data(series)
-    .join('path')
-    .attr('class', 'stream-layer')
-    .attr('d', area)
-    .attr('fill', (d, i) => getTopicColor(i))
-    .attr('opacity', 0.75)
-    .on('mouseover', function(event, d) {
-      const topicId = +d.key.replace('t', '');
-      d3.select(this).attr('opacity', 1);
-      tooltip.show(event, `<strong>${getTopicLabel(topicId)}</strong>`);
-    })
-    .on('mousemove', e => tooltip.move(e))
-    .on('mouseout', function() {
-      d3.select(this).attr('opacity', 0.75);
-      tooltip.hide();
-    });
-
-  g.append('g').attr('transform', `translate(0,${h})`)
-    .call(d3.axisBottom(xScale).ticks(d3.timeMonth.every(3)).tickFormat(d3.timeFormat('%b %y')))
-    .call(g => g.selectAll('text').attr('fill', '#6e6e8a').attr('font-size', 10).attr('font-family', 'JetBrains Mono, monospace'))
-    .call(g => g.selectAll('line,path').attr('stroke', 'rgba(255,255,255,0.08)'));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOPIC BUBBLE CHART
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderTopicBubbles() {
-  if (!DATA.topics) return;
-  const topics = DATA.topics.topics;
-
-  const el = document.getElementById('topic-bubble-chart');
-  const W = el.getBoundingClientRect().width || 700;
-  const H = 340;
-
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-
-  const rScale = d3.scaleSqrt().domain([0, d3.max(topics, d => d.doc_count)]).range([20, 70]);
-
-  const pack = d3.pack().size([W - 4, H - 4]).padding(6);
-  const root = d3.hierarchy({ children: topics }).sum(d => d.doc_count);
-  pack(root);
-
-  const tooltip = createFloatingTooltip();
-
-  const node = svg.selectAll('.bubble')
-    .data(root.leaves())
-    .join('g')
-    .attr('class', 'bubble')
-    .attr('transform', d => `translate(${d.x},${d.y})`);
-
-  node.append('circle')
-    .attr('r', d => d.r)
-    .attr('fill', d => d.data.color)
-    .attr('opacity', 0.7)
-    .attr('stroke', d => d.data.color)
-    .attr('stroke-width', 1)
-    .attr('stroke-opacity', 0.3)
-    .on('mouseover', function(event, d) {
-      d3.select(this).attr('opacity', 1);
-      tooltip.show(event,
-        `<strong>${d.data.label}</strong><br/>
-        ${d.data.doc_count} conversations<br/>
-        <em style="color:#888">${d.data.top_words.slice(0,4).map(w=>w[0]).join(', ')}</em>`);
-    })
-    .on('mousemove', e => tooltip.move(e))
-    .on('mouseout', function() {
-      d3.select(this).attr('opacity', 0.7);
-      tooltip.hide();
-    });
-
-  node.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'middle')
-    .attr('fill', 'white')
-    .attr('font-size', d => Math.max(8, Math.min(13, d.r * 0.28)))
-    .attr('font-weight', '600')
-    .attr('pointer-events', 'none')
-    .each(function(d) {
-      const words = d.data.label.split(' ');
-      const el = d3.select(this);
-      if (d.r < 28) {
-        el.text('');
-        return;
-      }
-      if (words.length === 1 || d.r < 40) {
-        el.text(d.r < 30 ? '' : words[0]);
-        return;
-      }
-      const mid = Math.ceil(words.length / 2);
-      el.append('tspan').attr('x', 0).attr('dy', '-0.5em').text(words.slice(0, mid).join(' '));
-      el.append('tspan').attr('x', 0).attr('dy', '1.1em').text(words.slice(mid).join(' '));
-    });
-
-  node.append('text')
-    .attr('y', d => d.r - 8)
-    .attr('text-anchor', 'middle')
-    .attr('fill', 'rgba(255,255,255,0.7)')
-    .attr('font-size', d => Math.max(7, Math.min(11, d.r * 0.22)))
-    .attr('font-family', 'JetBrains Mono, monospace')
-    .attr('pointer-events', 'none')
-    .text(d => d.r > 30 ? d.data.doc_count : '');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UMAP GALAXY
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderUMAP() {
-  if (!DATA.umap) return;
-  const { points, clusters } = DATA.umap;
-
-  const container = document.getElementById('umap-container');
-  const svgEl = document.getElementById('umap-svg');
-  const tooltip = document.getElementById('umap-tooltip');
-  const legend = document.getElementById('umap-legend');
-
-  const W = container.getBoundingClientRect().width;
-  const H = container.getBoundingClientRect().height;
-  const PADDING = 30;
-
-  const svg = d3.select(svgEl).attr('viewBox', `0 0 ${W} ${H}`);
-
-  // Scales: data is in [-1, 1]
-  const xScale = d3.scaleLinear().domain([-1, 1]).range([PADDING, W - PADDING]);
-  const yScale = d3.scaleLinear().domain([-1, 1]).range([H - PADDING, PADDING]);
-
-  // Color modes
-  const parseDate = d => d ? new Date(d) : new Date(0);
-  const dateExtent = d3.extent(points, d => parseDate(d.date));
-  const timeColor = d3.scaleSequential().domain(dateExtent).interpolator(d3.interpolateCool);
-
-  const charExtent = d3.extent(points, d => d.total_chars);
-  const lenColor = d3.scaleSequential().domain(charExtent).interpolator(d3.interpolateViridis);
-
-  const clusterColors = ['#7c6bff','#ff6b9d','#6bffd3','#ffcc6b','#a855f7','#22c55e','#06b6d4','#f97316'];
-
-  let currentMode = 'topic';
-
-  function getColor(d) {
-    switch (currentMode) {
-      case 'topic':   return getTopicColor(d.topic);
-      case 'time':    return timeColor(parseDate(d.date));
-      case 'length':  return lenColor(d.total_chars);
-      case 'cluster': return d.cluster === -1 ? '#333' : clusterColors[d.cluster % clusterColors.length];
-      default:        return '#7c6bff';
+  document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+    const target = +el.dataset.target;
+    const suffix = el.dataset.suffix || '';
+    const duration = 1800;
+    const start = performance.now();
+
+    function tick(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const val = Math.round(target * ease);
+      el.textContent = val.toLocaleString() + suffix;
+      if (t < 1) requestAnimationFrame(tick);
     }
-  }
+    requestAnimationFrame(tick);
+  });
+}
 
-  // Starfield background (faint ambient dots) — rendered first so dots appear above
-  const bgGroup = svg.append('g').attr('class', 'starfield');
-  const rng = (min, max) => min + Math.random() * (max - min);
-  for (let i = 0; i < 150; i++) {
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 2: LANDSCAPE — UMAP Galaxy (Scrollytelling)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initLandscapeChart() {
+  const W = 900, H = 620;
+
+  const svg = d3.select('#landscape-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Starfield background
+  const bgGroup = svg.append('g').attr('class', 'bg');
+  for (let i = 0; i < 200; i++) {
     bgGroup.append('circle')
-      .attr('cx', rng(0, W)).attr('cy', rng(0, H))
-      .attr('r', rng(0.3, 1))
-      .attr('fill', '#ffffff').attr('opacity', rng(0.02, 0.08));
+      .attr('cx', Math.random() * W)
+      .attr('cy', Math.random() * H)
+      .attr('r', Math.random() * 0.8 + 0.2)
+      .attr('fill', `rgba(255,255,255,${Math.random() * 0.15 + 0.02})`);
   }
 
-  // Stats overlay (rendered last so it stays on top)
-  const statsText = svg.append('text')
-    .attr('x', 12).attr('y', H - 12)
-    .attr('fill', '#3a3a55')
-    .attr('font-size', '10px')
-    .attr('font-family', 'JetBrains Mono, monospace')
-    .text(`${points.length} conversations · scroll to zoom · drag to pan`);
+  const points = DATA.umap.points;
+  const pad = 40;
+  const xExt = d3.extent(points, d => d.x);
+  const yExt = d3.extent(points, d => d.y);
+  // Add 5% padding to extent
+  const xPad = (xExt[1] - xExt[0]) * 0.05;
+  const yPad = (yExt[1] - yExt[0]) * 0.05;
+  const xScale = d3.scaleLinear().domain([xExt[0] - xPad, xExt[1] + xPad]).range([pad, W - pad]);
+  const yScale = d3.scaleLinear().domain([yExt[0] - yPad, yExt[1] + yPad]).range([pad, H - pad]);
 
-  // Dot group — must be declared BEFORE zoom callback references it
   const dotGroup = svg.append('g').attr('class', 'dots');
 
-  // Zoom behavior
-  const zoom = d3.zoom().scaleExtent([0.3, 20]).on('zoom', (event) => {
-    dotGroup.attr('transform', event.transform);
-  });
-  svg.call(zoom);
+  // Topic color lookup from topics.json
+  const topicColorMap = {};
+  const topicLabelMap = {};
+  if (DATA.topics) {
+    DATA.topics.topics.forEach(t => {
+      topicColorMap[t.id] = t.color;
+      topicLabelMap[t.id] = t.label;
+    });
+  }
 
-  // Auto-fit: center the data cloud in the canvas
-  const x0 = d3.min(points, p => xScale(p.x));
-  const x1 = d3.max(points, p => xScale(p.x));
-  const y0 = d3.min(points, p => yScale(p.y));
-  const y1 = d3.max(points, p => yScale(p.y));
-  const dataW = x1 - x0, dataH = y1 - y0;
-  const fitScale = Math.min(W / dataW, H / dataH) * 0.75;
-  const fitTx = (W - (x0 + x1) * fitScale) / 2;
-  const fitTy = (H - (y0 + y1) * fitScale) / 2;
-  svg.call(zoom.transform, d3.zoomIdentity.translate(fitTx, fitTy).scale(fitScale));
-
-  // Render dots
-  const r = Math.max(2, Math.min(4, W / 450));
-
-  const circles = dotGroup.selectAll('circle')
+  dotGroup.selectAll('.dot')
     .data(points)
-    .join('circle')
+    .enter().append('circle')
+    .attr('class', 'dot')
     .attr('cx', d => xScale(d.x))
     .attr('cy', d => yScale(d.y))
-    .attr('r', r)
-    .attr('fill', d => getColor(d))
-    .attr('opacity', 0.75)
-    .attr('stroke', d => getColor(d))
-    .attr('stroke-opacity', 0.2)
-    .attr('stroke-width', 0.5);
+    .attr('r', 2.5)
+    .attr('fill', '#333')
+    .attr('opacity', 0);
 
-  // Cluster labels — use getTopicLabel for correct display
-  const clusterGroup = dotGroup.append('g').attr('class', 'cluster-labels');
-  clusters.forEach(cl => {
-    const label = getTopicLabel(cl.topic);
-    const color = getTopicColor(cl.topic);
-    clusterGroup.append('text')
-      .attr('x', xScale(cl.center_x))
-      .attr('y', yScale(cl.center_y))
+  STATE.landscape = { svg, dotGroup, xScale, yScale, W, H, topicColorMap, topicLabelMap };
+}
+
+function updateLandscapeStep(step) {
+  if (!STATE.landscape) return;
+  const { dotGroup, topicColorMap, topicLabelMap, svg, W, H } = STATE.landscape;
+  const dots = dotGroup.selectAll('.dot');
+
+  // Remove previous annotations
+  svg.selectAll('.annotation').remove();
+
+  switch (step) {
+    case 0:
+      dots.transition()
+        .delay((d, i) => Math.floor(i / 30) * 20)
+        .duration(600)
+        .attr('opacity', 0.7)
+        .attr('fill', '#7c6bff')
+        .attr('r', 2.5);
+      break;
+
+    case 1:
+      dots.transition().duration(600)
+        .attr('fill', d => topicColorMap[d.topic] || '#555')
+        .attr('opacity', 0.7)
+        .attr('r', 2.5);
+      buildLandscapeLegend(topicLabelMap, topicColorMap);
+      break;
+
+    case 2: highlightTopics(dots, new Set([1]), topicColorMap); break;
+    case 3: highlightTopics(dots, new Set([5]), topicColorMap); break;
+    case 4: highlightTopics(dots, new Set([0, 6, 15, 17]), topicColorMap); break;
+
+    case 5:
+      dots.transition().duration(600)
+        .attr('fill', d => topicColorMap[d.topic] || '#555')
+        .attr('opacity', 0.7)
+        .attr('r', 2.5);
+      break;
+  }
+}
+
+function highlightTopics(dots, topicSet, colorMap) {
+  dots.transition().duration(400)
+    .attr('opacity', d => topicSet.has(d.topic) ? 0.9 : 0.05)
+    .attr('r', d => topicSet.has(d.topic) ? 4 : 1.5)
+    .attr('fill', d => topicSet.has(d.topic) ? (colorMap[d.topic] || '#888') : '#1a1a26');
+}
+
+function buildLandscapeLegend(labelMap, colorMap) {
+  const container = document.getElementById('landscape-legend');
+  if (!container || container.children.length > 0) return;
+  const counts = {};
+  DATA.umap.points.forEach(p => { counts[p.topic] = (counts[p.topic] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  sorted.forEach(([tid, cnt]) => {
+    const id = +tid;
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${colorMap[id] || '#555'}"></div>
+      <span>${labelMap[id] || 'Topic ' + id} (${cnt})</span>`;
+    container.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 3: OBSESSIONS — Horizontal Bar Chart
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initObsessionsChart() {
+  const W = 900, H = 620;
+  const margin = { top: 20, right: 60, bottom: 30, left: 200 };
+
+  const svg = d3.select('#obsessions-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const scores = DATA.insights.obsession_scores.slice(0, 18);
+
+  const xScale = d3.scaleLinear()
+    .domain([0, d3.max(scores, d => d.obsession_score) * 1.1])
+    .range([margin.left, W - margin.right]);
+
+  const yScale = d3.scaleBand()
+    .domain(scores.map(d => d.label))
+    .range([margin.top, H - margin.bottom])
+    .padding(0.25);
+
+  // Y axis
+  svg.append('g')
+    .attr('class', 'axis')
+    .attr('transform', `translate(${margin.left}, 0)`)
+    .call(d3.axisLeft(yScale).tickSize(0))
+    .select('.domain').remove();
+
+  svg.selectAll('.axis text')
+    .style('fill', '#6e6e8a')
+    .style('font-size', '11px');
+
+  // Bars (start at 0 width)
+  svg.selectAll('.bar')
+    .data(scores)
+    .enter().append('rect')
+    .attr('class', 'bar')
+    .attr('x', margin.left)
+    .attr('y', d => yScale(d.label))
+    .attr('width', 0)
+    .attr('height', yScale.bandwidth())
+    .attr('fill', d => d.color)
+    .attr('rx', 3)
+    .attr('opacity', 0.8);
+
+  // Score labels
+  svg.selectAll('.score-label')
+    .data(scores)
+    .enter().append('text')
+    .attr('class', 'score-label')
+    .attr('x', margin.left)
+    .attr('y', d => yScale(d.label) + yScale.bandwidth() / 2)
+    .attr('dy', '0.35em')
+    .attr('fill', '#6e6e8a')
+    .attr('font-size', '10px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('opacity', 0)
+    .text(d => d.obsession_score.toFixed(0));
+
+  STATE.obsessions = { svg, xScale, yScale, scores, margin, W, H };
+}
+
+function updateObsessionsStep(step) {
+  if (!STATE.obsessions) return;
+  const { svg, xScale, yScale, scores, margin } = STATE.obsessions;
+  const bars = svg.selectAll('.bar');
+  const labels = svg.selectAll('.score-label');
+
+  svg.selectAll('.annotation').remove();
+
+  switch (step) {
+    case 0:
+      // All bars animate in
+      bars.transition().duration(800).delay((d, i) => i * 40)
+        .attr('width', d => xScale(d.obsession_score) - margin.left)
+        .attr('opacity', 0.8)
+        .attr('fill', d => d.color);
+      labels.transition().duration(800).delay((d, i) => i * 40 + 400)
+        .attr('x', d => xScale(d.obsession_score) + 8)
+        .attr('opacity', 1);
+      break;
+
+    case 1:
+      // Highlight top 3
+      bars.transition().duration(400)
+        .attr('opacity', (d, i) => i < 3 ? 1 : 0.2)
+        .attr('width', d => xScale(d.obsession_score) - margin.left);
+      labels.transition().duration(400)
+        .attr('opacity', (d, i) => i < 3 ? 1 : 0.15);
+      break;
+
+    case 2:
+      // Highlight the deep-but-rare topics (Career, AI Agents, etc.)
+      const deepTopics = new Set();
+      DATA.insights.obsession_scores.forEach(s => {
+        const depth = DATA.insights.topic_depth[String(s.topic_id)];
+        if (depth && depth.depth_score > 70 && s.doc_count < 80) {
+          deepTopics.add(s.label);
+        }
+      });
+      bars.transition().duration(400)
+        .attr('opacity', d => deepTopics.has(d.label) ? 1 : 0.15);
+      labels.transition().duration(400)
+        .attr('opacity', d => deepTopics.has(d.label) ? 1 : 0.1);
+      break;
+
+    case 3:
+      // Show all bars with depth-based gradient
+      bars.transition().duration(400)
+        .attr('opacity', 0.8);
+      labels.transition().duration(400).attr('opacity', 0.8);
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 4: LIBRARY — Reading Conversations Timeline
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initLibraryChart() {
+  const W = 900, H = 620;
+  const margin = { top: 40, right: 30, bottom: 50, left: 40 };
+
+  const svg = d3.select('#library-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const books = DATA.insights.reading.books;
+  const parseDate = d3.timeParse('%Y-%m-%d');
+
+  books.forEach(b => { b._date = parseDate(b.date); });
+  const validBooks = books.filter(b => b._date);
+
+  const xScale = d3.scaleTime()
+    .domain(d3.extent(validBooks, d => d._date))
+    .range([margin.left, W - margin.right]);
+
+  const yScale = d3.scaleLinear()
+    .domain([0, d3.max(validBooks, d => d.turns) || 64])
+    .range([H - margin.bottom, margin.top]);
+
+  const rScale = d3.scaleSqrt()
+    .domain([0, d3.max(validBooks, d => d.h_chars) || 5000])
+    .range([3, 14]);
+
+  // X axis
+  svg.append('g')
+    .attr('class', 'axis')
+    .attr('transform', `translate(0, ${H - margin.bottom})`)
+    .call(d3.axisBottom(xScale).ticks(8).tickFormat(d3.timeFormat('%b %Y')))
+    .select('.domain').attr('stroke', 'rgba(255,255,255,0.08)');
+
+  // Y axis label
+  svg.append('text')
+    .attr('x', 12).attr('y', margin.top - 12)
+    .attr('fill', '#6e6e8a').attr('font-size', '10px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .text('Messages per conversation');
+
+  // Grid lines
+  svg.append('g').attr('class', 'grid')
+    .selectAll('line')
+    .data(yScale.ticks(5))
+    .enter().append('line')
+    .attr('x1', margin.left).attr('x2', W - margin.right)
+    .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+    .attr('stroke', 'rgba(255,255,255,0.04)');
+
+  // Book dots
+  const dotGroup = svg.append('g').attr('class', 'book-dots');
+  dotGroup.selectAll('.book-dot')
+    .data(validBooks)
+    .enter().append('circle')
+    .attr('class', 'book-dot')
+    .attr('cx', d => xScale(d._date))
+    .attr('cy', d => yScale(d.turns))
+    .attr('r', 0)
+    .attr('fill', '#f97316')
+    .attr('opacity', 0)
+    .attr('stroke', 'rgba(249, 115, 22, 0.3)')
+    .attr('stroke-width', 1);
+
+  // Labels group
+  svg.append('g').attr('class', 'book-labels');
+
+  STATE.library = { svg, dotGroup, xScale, yScale, rScale, validBooks, margin, W, H };
+}
+
+function updateLibraryStep(step) {
+  if (!STATE.library) return;
+  const { svg, dotGroup, xScale, yScale, rScale, validBooks, margin, W, H } = STATE.library;
+  const dots = dotGroup.selectAll('.book-dot');
+
+  svg.selectAll('.book-labels text').remove();
+  svg.selectAll('.annotation').remove();
+  svg.selectAll('.bridge-line').remove();
+
+  switch (step) {
+    case 0:
+      dots.transition().duration(600).delay((d, i) => i * 15)
+        .attr('r', d => rScale(d.h_chars))
+        .attr('opacity', 0.7)
+        .attr('fill', '#f97316');
+      break;
+
+    case 1:
+      // Label notable books
+      dots.transition().duration(400)
+        .attr('opacity', d => d.turns >= 15 ? 0.9 : 0.3);
+
+      const notable = validBooks.filter(b => b.turns >= 15).slice(0, 8);
+      const labelGroup = svg.select('.book-labels');
+      notable.forEach((b, i) => {
+        const x = xScale(b._date);
+        const y = yScale(b.turns) - rScale(b.h_chars) - 8;
+        labelGroup.append('text')
+          .attr('x', x).attr('y', y)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#f97316')
+          .attr('font-size', '9px')
+          .attr('font-family', "'JetBrains Mono', monospace")
+          .attr('opacity', 0)
+          .text(b.name.slice(0, 30) + (b.name.length > 30 ? '…' : ''))
+          .transition().delay(i * 80).duration(400)
+          .attr('opacity', 0.9);
+      });
+      break;
+
+    case 2:
+      dots.transition().duration(400).attr('opacity', 0.6);
+      // Add annotation about extraction pattern
+      const ann = svg.append('g').attr('class', 'annotation');
+      ann.append('text')
+        .attr('x', W / 2).attr('y', margin.top + 20)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#f97316')
+        .attr('font-size', '12px')
+        .attr('font-family', "'JetBrains Mono', monospace")
+        .attr('opacity', 0)
+        .text('scratchpad → observations → extraction → essence')
+        .transition().duration(600).attr('opacity', 0.85);
+      break;
+
+    case 3:
+      dots.transition().duration(400)
+        .attr('opacity', 0.5)
+        .attr('fill', '#f97316');
+      // Show bridge connection annotation
+      const bridgeAnn = svg.append('g').attr('class', 'annotation');
+      bridgeAnn.append('text')
+        .attr('x', W / 2).attr('y', H - margin.bottom + 35)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#6e6e8a')
+        .attr('font-size', '11px')
+        .text('Reading ↔ Business Strategy: 81 shared conversations')
+        .attr('opacity', 0)
+        .transition().duration(600).attr('opacity', 0.8);
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 5: DUAL LIFE — Radar / Spider Chart
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initDualLifeChart() {
+  const W = 900, H = 620;
+
+  const svg = d3.select('#duallife-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const fp = DATA.insights.fingerprint;
+  const axes = ['Strategizing', 'Learning', 'Consulting', 'Building', 'Reflecting', 'Exploring'];
+  const values = axes.map(a => fp[a] || 0);
+
+  const cx = W / 2, cy = H / 2;
+  const radius = Math.min(W, H) / 2 - 70;
+  const angleSlice = (Math.PI * 2) / axes.length;
+
+  const axisColors = {
+    Strategizing: '#f43f5e', Learning: '#f59e0b', Consulting: '#06b6d4',
+    Building: '#22c55e', Reflecting: '#a855f7', Exploring: '#ec4899',
+  };
+
+  // Grid circles
+  const levels = 5;
+  for (let i = 1; i <= levels; i++) {
+    const r = radius * (i / levels);
+    const pts = axes.map((_, j) => {
+      const angle = angleSlice * j - Math.PI / 2;
+      return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+    });
+    svg.append('polygon')
+      .attr('points', pts.map(p => p.join(',')).join(' '))
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.06)')
+      .attr('stroke-width', 1);
+
+    // Level label
+    if (i === levels) {
+      svg.append('text')
+        .attr('x', cx + 6).attr('y', cy - r - 4)
+        .attr('fill', '#3a3a55').attr('font-size', '9px')
+        .attr('font-family', "'JetBrains Mono', monospace")
+        .text('100');
+    }
+  }
+
+  // Axis lines and labels
+  axes.forEach((axis, i) => {
+    const angle = angleSlice * i - Math.PI / 2;
+    const x2 = cx + radius * Math.cos(angle);
+    const y2 = cy + radius * Math.sin(angle);
+
+    svg.append('line')
+      .attr('x1', cx).attr('y1', cy)
+      .attr('x2', x2).attr('y2', y2)
+      .attr('stroke', 'rgba(255,255,255,0.08)');
+
+    const labelR = radius + 28;
+    svg.append('text')
+      .attr('class', `radar-label radar-label-${i}`)
+      .attr('x', cx + labelR * Math.cos(angle))
+      .attr('y', cy + labelR * Math.sin(angle))
       .attr('text-anchor', 'middle')
-      .attr('fill', color)
-      .attr('font-size', '11px')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', '#6e6e8a')
+      .attr('font-size', '12px')
       .attr('font-weight', '600')
-      .attr('font-family', 'Inter, sans-serif')
-      .attr('paint-order', 'stroke')
-      .attr('stroke', 'rgba(10,10,15,0.9)')
-      .attr('stroke-width', 3)
-      .attr('pointer-events', 'none')
-      .text(`● ${label} (${cl.size})`);
+      .text(axis);
+
+    // Value label
+    const valR = radius * (values[i] / 100) + 14;
+    svg.append('text')
+      .attr('class', `radar-val radar-val-${i}`)
+      .attr('x', cx + valR * Math.cos(angle))
+      .attr('y', cy + valR * Math.sin(angle))
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', axisColors[axis])
+      .attr('font-size', '11px')
+      .attr('font-weight', '700')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('opacity', 0)
+      .text(Math.round(values[i]));
   });
 
-  // Tooltip interaction
-  svg.on('mousemove', function(event) {
-    const [mx, my] = d3.pointer(event);
-    const transform = d3.zoomTransform(svgEl);
-    const ix = transform.invertX(mx);
-    const iy = transform.invertY(my);
+  // Data polygon
+  const dataPoints = axes.map((axis, i) => {
+    const angle = angleSlice * i - Math.PI / 2;
+    const r = radius * (values[i] / 100);
+    return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+  });
 
-    // Find nearest point
-    let best = null, bestDist = Infinity;
-    points.forEach(p => {
-      const px = xScale(p.x), py = yScale(p.y);
-      const dist = Math.hypot(ix - px, iy - py);
-      if (dist < bestDist) { bestDist = dist; best = p; }
+  svg.append('polygon')
+    .attr('class', 'radar-shape')
+    .attr('points', dataPoints.map(p => p.join(',')).join(' '))
+    .attr('fill', 'rgba(124, 107, 255, 0.12)')
+    .attr('stroke', '#7c6bff')
+    .attr('stroke-width', 2)
+    .attr('opacity', 0);
+
+  // Data dots
+  dataPoints.forEach((p, i) => {
+    svg.append('circle')
+      .attr('class', `radar-dot radar-dot-${i}`)
+      .attr('cx', p[0]).attr('cy', p[1])
+      .attr('r', 5)
+      .attr('fill', axisColors[axes[i]])
+      .attr('opacity', 0);
+  });
+
+  STATE.dualLife = { svg, axes, cx, cy, radius, angleSlice, dataPoints, values, axisColors };
+}
+
+function updateDualLifeStep(step) {
+  if (!STATE.dualLife) return;
+  const { svg, axes, axisColors } = STATE.dualLife;
+
+  switch (step) {
+    case 0:
+      // Full shape appears
+      svg.select('.radar-shape')
+        .transition().duration(800)
+        .attr('opacity', 1);
+      axes.forEach((_, i) => {
+        svg.select(`.radar-dot-${i}`)
+          .transition().delay(i * 80).duration(500)
+          .attr('opacity', 1);
+        svg.select(`.radar-val-${i}`)
+          .transition().delay(i * 80 + 200).duration(400)
+          .attr('opacity', 0.9);
+      });
+      // Reset all labels
+      axes.forEach((_, i) => {
+        svg.select(`.radar-label-${i}`)
+          .transition().duration(400)
+          .attr('fill', '#6e6e8a').attr('font-size', '12px');
+      });
+      break;
+
+    case 1:
+      // Pulse Reflecting axis (index 4)
+      axes.forEach((axis, i) => {
+        const isReflecting = i === 4;
+        svg.select(`.radar-label-${i}`)
+          .transition().duration(400)
+          .attr('fill', isReflecting ? axisColors[axis] : '#3a3a55')
+          .attr('font-size', isReflecting ? '14px' : '11px');
+        svg.select(`.radar-dot-${i}`)
+          .transition().duration(400)
+          .attr('r', isReflecting ? 8 : 3)
+          .attr('opacity', isReflecting ? 1 : 0.2);
+        svg.select(`.radar-val-${i}`)
+          .transition().duration(400)
+          .attr('opacity', isReflecting ? 1 : 0.15);
+      });
+      svg.select('.radar-shape')
+        .transition().duration(400)
+        .attr('opacity', 0.3);
+      break;
+
+    case 2:
+      // Pulse Strategizing axis (index 0)
+      axes.forEach((axis, i) => {
+        const isStrat = i === 0;
+        svg.select(`.radar-label-${i}`)
+          .transition().duration(400)
+          .attr('fill', isStrat ? axisColors[axis] : '#3a3a55')
+          .attr('font-size', isStrat ? '14px' : '11px');
+        svg.select(`.radar-dot-${i}`)
+          .transition().duration(400)
+          .attr('r', isStrat ? 8 : 3)
+          .attr('opacity', isStrat ? 1 : 0.2);
+        svg.select(`.radar-val-${i}`)
+          .transition().duration(400)
+          .attr('opacity', isStrat ? 1 : 0.15);
+      });
+      break;
+
+    case 3:
+      // Both highlighted, full shape
+      svg.select('.radar-shape')
+        .transition().duration(600)
+        .attr('opacity', 1)
+        .attr('fill', 'rgba(124, 107, 255, 0.15)');
+      axes.forEach((axis, i) => {
+        svg.select(`.radar-label-${i}`)
+          .transition().duration(400)
+          .attr('fill', axisColors[axis])
+          .attr('font-size', '12px');
+        svg.select(`.radar-dot-${i}`)
+          .transition().duration(400)
+          .attr('r', 5).attr('opacity', 1);
+        svg.select(`.radar-val-${i}`)
+          .transition().duration(400).attr('opacity', 0.9);
+      });
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 6: THREADS — Recurring Conversation Timelines
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initThreadsChart() {
+  const W = 900, H = 620;
+  const margin = { top: 30, right: 30, bottom: 40, left: 220 };
+
+  const svg = d3.select('#threads-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const threads = DATA.insights.recurring_threads.slice(0, 15);
+  const parseDate = d3.timeParse('%Y-%m-%d');
+
+  // Collect all dates
+  let allDates = [];
+  threads.forEach(t => {
+    t.conversations.forEach(c => {
+      if (c.date) allDates.push(parseDate(c.date));
     });
+  });
+  allDates = allDates.filter(Boolean);
 
-    if (best && bestDist < 25) {
-      const rect = container.getBoundingClientRect();
-      const tx = event.clientX - rect.left + 12;
-      const ty = event.clientY - rect.top + 12;
+  const xScale = d3.scaleTime()
+    .domain(d3.extent(allDates))
+    .range([margin.left, W - margin.right]);
 
-      tooltip.style.left = Math.min(tx, W - 300) + 'px';
-      tooltip.style.top = Math.min(ty, H - 120) + 'px';
-      tooltip.classList.add('visible');
+  const yScale = d3.scaleBand()
+    .domain(threads.map((t, i) => i))
+    .range([margin.top, H - margin.bottom])
+    .padding(0.35);
 
-      tooltip.querySelector('.tt-name').textContent = best.name || '(Untitled)';
-      tooltip.querySelector('.tt-meta').innerHTML =
-        `${best.date} · ${best.total_msgs} messages`;
-      const topicEl = tooltip.querySelector('.tt-topic');
-      topicEl.textContent = getTopicLabel(best.topic);
-      topicEl.style.background = getTopicColor(best.topic) + '25';
-      topicEl.style.color = getTopicColor(best.topic);
-    } else {
-      tooltip.classList.remove('visible');
+  // X axis
+  svg.append('g')
+    .attr('class', 'axis')
+    .attr('transform', `translate(0, ${H - margin.bottom})`)
+    .call(d3.axisBottom(xScale).ticks(6).tickFormat(d3.timeFormat('%b %Y')))
+    .select('.domain').attr('stroke', 'rgba(255,255,255,0.08)');
+
+  // Thread labels
+  threads.forEach((t, i) => {
+    const label = t.topic_label.length > 22 ? t.topic_label.slice(0, 22) + '…' : t.topic_label;
+    svg.append('text')
+      .attr('x', margin.left - 8)
+      .attr('y', yScale(i) + yScale.bandwidth() / 2)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', '#6e6e8a')
+      .attr('font-size', '10px')
+      .text(`${label} (${t.size})`);
+  });
+
+  // Thread lines
+  const threadGroup = svg.append('g').attr('class', 'thread-lines');
+
+  threads.forEach((t, i) => {
+    const y = yScale(i) + yScale.bandwidth() / 2;
+    const dates = t.conversations.map(c => parseDate(c.date)).filter(Boolean);
+    if (dates.length < 2) return;
+
+    // Span line
+    threadGroup.append('line')
+      .attr('class', `thread-line thread-${i}`)
+      .attr('x1', xScale(d3.min(dates)))
+      .attr('x2', xScale(d3.max(dates)))
+      .attr('y1', y).attr('y2', y)
+      .attr('stroke', t.topic_color || '#555')
+      .attr('stroke-width', 2)
+      .attr('opacity', 0);
+
+    // Conversation dots
+    t.conversations.forEach(c => {
+      const d = parseDate(c.date);
+      if (!d) return;
+      threadGroup.append('circle')
+        .attr('class', `thread-dot thread-dot-${i}`)
+        .attr('cx', xScale(d))
+        .attr('cy', y)
+        .attr('r', Math.min(c.turns / 4, 6) + 2)
+        .attr('fill', t.topic_color || '#555')
+        .attr('opacity', 0);
+    });
+  });
+
+  STATE.threads = { svg, threads, margin, W, H };
+}
+
+function updateThreadsStep(step) {
+  if (!STATE.threads) return;
+  const { svg, threads } = STATE.threads;
+
+  svg.selectAll('.annotation').remove();
+
+  switch (step) {
+    case 0:
+      // All threads appear
+      threads.forEach((t, i) => {
+        svg.selectAll(`.thread-${i}`)
+          .transition().delay(i * 60).duration(600)
+          .attr('opacity', 0.7);
+        svg.selectAll(`.thread-dot-${i}`)
+          .transition().delay(i * 60 + 200).duration(400)
+          .attr('opacity', 0.8);
+      });
+      break;
+
+    case 1:
+      // Highlight open threads
+      threads.forEach((t, i) => {
+        const opacity = t.is_open ? 1 : 0.15;
+        svg.selectAll(`.thread-${i}`).transition().duration(400).attr('opacity', opacity);
+        svg.selectAll(`.thread-dot-${i}`).transition().duration(400).attr('opacity', opacity);
+      });
+      break;
+
+    case 2:
+      // Color by trend
+      const trendColors = { deepening: '#22c55e', stable: '#f59e0b', fading: '#f43f5e' };
+      threads.forEach((t, i) => {
+        const color = trendColors[t.trend] || '#555';
+        svg.selectAll(`.thread-${i}`)
+          .transition().duration(400)
+          .attr('stroke', color).attr('opacity', 0.8);
+        svg.selectAll(`.thread-dot-${i}`)
+          .transition().duration(400)
+          .attr('fill', color).attr('opacity', 0.8);
+      });
+      break;
+
+    case 3:
+      // Highlight largest threads
+      threads.forEach((t, i) => {
+        const opacity = i < 3 ? 1 : 0.15;
+        svg.selectAll(`.thread-${i}`)
+          .transition().duration(400)
+          .attr('stroke', t.topic_color || '#555').attr('opacity', opacity);
+        svg.selectAll(`.thread-dot-${i}`)
+          .transition().duration(400)
+          .attr('fill', t.topic_color || '#555').attr('opacity', opacity);
+      });
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 7: META-COGNITIVE MIRROR — Multi-view
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initMetaCogChart() {
+  const W = 900, H = 620;
+
+  const svg = d3.select('#metacog-svg')
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  STATE.metacog = { svg, W, H };
+}
+
+function updateMetaCogStep(step) {
+  if (!STATE.metacog) return;
+  const { svg, W, H } = STATE.metacog;
+
+  // Clear previous
+  svg.selectAll('*').remove();
+
+  const cx = W / 2, cy = H / 2;
+  const mc = DATA.insights.meta_cognitive;
+
+  switch (step) {
+    case 0:
+      drawDonutChart(svg, mc.conversation_starters, cx, cy, Math.min(W, H) * 0.35, 'How conversations start');
+      break;
+    case 1:
+      drawVoiceBar(svg, DATA.insights.voice, W, H);
+      break;
+    case 2:
+      drawEmotionalBars(svg, mc.emotional_taxonomy, W, H);
+      break;
+    case 3:
+      drawHiddenPatterns(svg, mc.hidden_patterns, W, H);
+      break;
+  }
+}
+
+function drawDonutChart(svg, data, cx, cy, radius, title) {
+  const colorMap = {
+    context_paste: '#8b5cf6', question: '#06b6d4',
+    command: '#22c55e', brainstorm: '#f59e0b', empty: '#3a3a55',
+  };
+
+  svg.append('text')
+    .attr('x', cx).attr('y', 35)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6e6e8a').attr('font-size', '12px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .text(title);
+
+  const pie = d3.pie().value(d => d.count).sort(null);
+  const arc = d3.arc().innerRadius(radius * 0.55).outerRadius(radius);
+
+  const arcs = svg.append('g')
+    .attr('transform', `translate(${cx}, ${cy})`)
+    .selectAll('path')
+    .data(pie(data))
+    .enter().append('path')
+    .attr('d', arc)
+    .attr('fill', d => colorMap[d.data.type] || '#555')
+    .attr('stroke', '#12121a')
+    .attr('stroke-width', 2)
+    .attr('opacity', 0);
+
+  arcs.transition().delay((d, i) => i * 100).duration(600)
+    .attr('opacity', 0.85);
+
+  // Labels
+  const labelArc = d3.arc().innerRadius(radius * 0.8).outerRadius(radius * 1.3);
+  svg.append('g')
+    .attr('transform', `translate(${cx}, ${cy})`)
+    .selectAll('text')
+    .data(pie(data))
+    .enter().append('text')
+    .attr('transform', d => `translate(${labelArc.centroid(d)})`)
+    .attr('text-anchor', 'middle')
+    .attr('fill', d => colorMap[d.data.type] || '#888')
+    .attr('font-size', '10px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('opacity', 0)
+    .text(d => `${d.data.type} ${d.data.pct}%`)
+    .transition().delay((d, i) => i * 100 + 400).duration(400)
+    .attr('opacity', 0.9);
+}
+
+function drawVoiceBar(svg, voice, W, H) {
+  const barH = 50;
+  const barW = W * 0.65;
+  const x0 = (W - barW) / 2;
+  const y0 = H / 2 - barH / 2;
+
+  svg.append('text')
+    .attr('x', W / 2).attr('y', y0 - 40)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#e8e8f0').attr('font-size', '14px').attr('font-weight', '600')
+    .text('Your words vs AI-pasted content');
+
+  const userW = barW * (voice.user_written_pct / 100);
+
+  // User-written bar
+  svg.append('rect')
+    .attr('x', x0).attr('y', y0)
+    .attr('width', 0).attr('height', barH)
+    .attr('fill', '#7c6bff').attr('rx', 6)
+    .transition().duration(800)
+    .attr('width', userW);
+
+  // AI-pasted bar
+  svg.append('rect')
+    .attr('x', x0 + userW).attr('y', y0)
+    .attr('width', 0).attr('height', barH)
+    .attr('fill', '#f43f5e').attr('rx', 0)
+    .transition().delay(400).duration(600)
+    .attr('width', barW - userW);
+
+  // Right edge rounding
+  svg.append('rect')
+    .attr('x', x0).attr('y', y0)
+    .attr('width', barW).attr('height', barH)
+    .attr('fill', 'none').attr('stroke', 'rgba(255,255,255,0.1)')
+    .attr('rx', 6);
+
+  // Labels
+  svg.append('text')
+    .attr('x', x0 + userW / 2).attr('y', y0 + barH / 2 + 5)
+    .attr('text-anchor', 'middle')
+    .attr('fill', 'white').attr('font-size', '16px').attr('font-weight', '700')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('opacity', 0)
+    .text(`${voice.user_written_pct}% your words`)
+    .transition().delay(500).duration(400).attr('opacity', 1);
+
+  svg.append('text')
+    .attr('x', x0 + userW + (barW - userW) / 2).attr('y', y0 + barH / 2 + 5)
+    .attr('text-anchor', 'middle')
+    .attr('fill', 'white').attr('font-size', '12px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('opacity', 0)
+    .text(`${voice.ai_pasted_pct}%`)
+    .transition().delay(700).duration(400).attr('opacity', 0.8);
+}
+
+function drawEmotionalBars(svg, taxonomy, W, H) {
+  const margin = { top: 50, right: 40, bottom: 30, left: 130 };
+  const barColors = {
+    exploring: '#06b6d4', building: '#22c55e', processing: '#f59e0b',
+    reflecting: '#a855f7', brainstorming: '#ec4899', struggling: '#f43f5e',
+  };
+
+  svg.append('text')
+    .attr('x', W / 2).attr('y', 25)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#e8e8f0').attr('font-size', '14px').attr('font-weight', '600')
+    .text('Emotional undertones of your messages');
+
+  const xScale = d3.scaleLinear()
+    .domain([0, d3.max(taxonomy, d => d.pct)])
+    .range([margin.left, W - margin.right]);
+
+  const yScale = d3.scaleBand()
+    .domain(taxonomy.map(d => d.intent))
+    .range([margin.top, H - margin.bottom])
+    .padding(0.3);
+
+  // Labels
+  taxonomy.forEach(d => {
+    svg.append('text')
+      .attr('x', margin.left - 8)
+      .attr('y', yScale(d.intent) + yScale.bandwidth() / 2)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', barColors[d.intent] || '#6e6e8a')
+      .attr('font-size', '12px')
+      .attr('font-weight', '600')
+      .text(d.intent);
+  });
+
+  // Bars
+  taxonomy.forEach((d, i) => {
+    svg.append('rect')
+      .attr('x', margin.left)
+      .attr('y', yScale(d.intent))
+      .attr('width', 0)
+      .attr('height', yScale.bandwidth())
+      .attr('fill', barColors[d.intent] || '#555')
+      .attr('rx', 3)
+      .attr('opacity', 0.8)
+      .transition().delay(i * 80).duration(600)
+      .attr('width', xScale(d.pct) - margin.left);
+
+    svg.append('text')
+      .attr('x', xScale(d.pct) + 8)
+      .attr('y', yScale(d.intent) + yScale.bandwidth() / 2)
+      .attr('dominant-baseline', 'central')
+      .attr('fill', '#6e6e8a')
+      .attr('font-size', '11px')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('opacity', 0)
+      .text(`${d.pct}%`)
+      .transition().delay(i * 80 + 400).duration(400)
+      .attr('opacity', 0.8);
+  });
+}
+
+function drawHiddenPatterns(svg, patterns, W, H) {
+  svg.append('text')
+    .attr('x', W / 2).attr('y', 35)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#e8e8f0').attr('font-size', '14px').attr('font-weight', '600')
+    .text('When vulnerability meets ambition');
+
+  const sections = [
+    { label: 'Reflecting clusters in:', data: patterns.reflecting_topics, color: '#a855f7', y: 80 },
+    { label: 'Building clusters in:', data: patterns.building_topics, color: '#22c55e', y: H / 2 - 20 },
+    { label: 'Struggling clusters in:', data: patterns.struggling_topics, color: '#f43f5e', y: H - 120 },
+  ];
+
+  sections.forEach((sec, si) => {
+    svg.append('text')
+      .attr('x', 40).attr('y', sec.y)
+      .attr('fill', sec.color).attr('font-size', '12px').attr('font-weight', '600')
+      .text(sec.label);
+
+    sec.data.slice(0, 3).forEach((topic, ti) => {
+      const barW = Math.min((topic.count / 80) * (W - 200), W - 200);
+      svg.append('rect')
+        .attr('x', 40)
+        .attr('y', sec.y + 15 + ti * 28)
+        .attr('width', 0).attr('height', 20)
+        .attr('fill', sec.color).attr('rx', 3).attr('opacity', 0.6)
+        .transition().delay(si * 200 + ti * 80).duration(600)
+        .attr('width', barW);
+
+      svg.append('text')
+        .attr('x', 48)
+        .attr('y', sec.y + 15 + ti * 28 + 14)
+        .attr('fill', 'white').attr('font-size', '10px')
+        .attr('opacity', 0)
+        .text(`${topic.label} (${topic.count})`)
+        .transition().delay(si * 200 + ti * 80 + 300).duration(400)
+        .attr('opacity', 0.9);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 8: KNOWLEDGE GRAPH (Interactive Bowl)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderGraph() {
+  if (!DATA.graph) return;
+  const container = document.getElementById('graph-container');
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+
+  const svg = d3.select('#graph-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const tooltip = document.getElementById('graph-tooltip');
+
+  const nodes = DATA.graph.nodes;
+  const links = DATA.graph.edges;
+
+  const catColors = {
+    'AI/ML': '#7c6bff', 'Software': '#06b6d4', 'Business': '#22c55e',
+    'Data Science': '#f59e0b', 'Leadership': '#f43f5e', 'Research': '#a855f7',
+  };
+
+  // Category pills
+  const pillContainer = document.getElementById('category-pills');
+  const cats = [...new Set(nodes.map(n => n.category))];
+  const activeCats = new Set(cats);
+
+  cats.forEach(cat => {
+    const pill = document.createElement('div');
+    pill.className = 'pill active';
+    pill.style.color = catColors[cat] || '#888';
+    pill.innerHTML = `<div class="dot" style="background:${catColors[cat] || '#888'}"></div>${cat}`;
+    pill.addEventListener('click', () => {
+      if (activeCats.has(cat)) { activeCats.delete(cat); pill.classList.remove('active'); }
+      else { activeCats.add(cat); pill.classList.add('active'); }
+      updateGraphVisibility();
+    });
+    pillContainer.appendChild(pill);
+  });
+
+  // Scales
+  const rScale = d3.scaleSqrt()
+    .domain(d3.extent(nodes, n => n.freq))
+    .range([4, 22]);
+
+  const wScale = d3.scaleLinear()
+    .domain(d3.extent(links, l => l.weight))
+    .range([0.5, 4]);
+
+  // Force simulation
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(80).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-280).distanceMax(500))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => rScale(d.freq) + 4))
+    .alphaDecay(0.015);
+
+  // Zoom
+  const g = svg.append('g');
+  const zoom = d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(zoom);
+
+  // Zoom controls
+  document.getElementById('graph-zoom-in').addEventListener('click', () =>
+    svg.transition().duration(300).call(zoom.scaleBy, 1.4));
+  document.getElementById('graph-zoom-out').addEventListener('click', () =>
+    svg.transition().duration(300).call(zoom.scaleBy, 0.7));
+  document.getElementById('graph-reset').addEventListener('click', () =>
+    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity));
+
+  // Links
+  const link = g.append('g').selectAll('line')
+    .data(links).enter().append('line')
+    .attr('stroke', 'rgba(255,255,255,0.08)')
+    .attr('stroke-width', d => wScale(d.weight));
+
+  // Nodes
+  const node = g.append('g').selectAll('g')
+    .data(nodes).enter().append('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.1).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+    );
+
+  node.append('circle')
+    .attr('r', d => rScale(d.freq))
+    .attr('fill', d => catColors[d.category] || '#555')
+    .attr('opacity', 0.75)
+    .attr('stroke', d => catColors[d.category] || '#555')
+    .attr('stroke-width', 1)
+    .attr('stroke-opacity', 0.3);
+
+  node.append('text')
+    .text(d => d.id)
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => rScale(d.freq) + 12)
+    .attr('fill', '#6e6e8a')
+    .attr('font-size', d => rScale(d.freq) > 12 ? '10px' : '8px')
+    .attr('font-family', "'JetBrains Mono', monospace");
+
+  // Tooltip
+  node.on('mouseover', (event, d) => {
+    tooltip.innerHTML = `<strong style="color:${catColors[d.category]}">${d.id}</strong><br>
+      <span style="color:#6e6e8a;font-size:11px">${d.category} · ${d.freq} mentions · ${d.degree} connections</span>`;
+    tooltip.classList.add('visible');
+    tooltip.style.left = event.offsetX + 10 + 'px';
+    tooltip.style.top = event.offsetY - 10 + 'px';
+  }).on('mouseout', () => tooltip.classList.remove('visible'));
+
+  simulation.on('tick', () => {
+    link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  function updateGraphVisibility() {
+    node.attr('opacity', d => activeCats.has(d.category) ? 1 : 0.05);
+    link.attr('opacity', d => {
+      const s = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source);
+      const t = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target);
+      return (activeCats.has(s.category) && activeCats.has(t.category)) ? 0.5 : 0.02;
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 9: EXPLORE — Interactive UMAP Galaxy
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderExploreUMAP() {
+  if (!DATA.umap) return;
+
+  const container = document.getElementById('umap-container');
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+  const svg = d3.select('#umap-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const tooltip = document.getElementById('umap-tooltip');
+
+  const points = DATA.umap.points;
+  const pad = 40;
+  const xScale = d3.scaleLinear().domain([-1, 1]).range([pad, W - pad]);
+  const yScale = d3.scaleLinear().domain([-1, 1]).range([pad, H - pad]);
+
+  // Starfield
+  const bgG = svg.append('g');
+  for (let i = 0; i < 150; i++) {
+    bgG.append('circle')
+      .attr('cx', Math.random() * W).attr('cy', Math.random() * H)
+      .attr('r', Math.random() * 0.6 + 0.2)
+      .attr('fill', `rgba(255,255,255,${Math.random() * 0.12 + 0.02})`);
+  }
+
+  const dotGroup = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.5, 8])
+    .on('zoom', e => dotGroup.attr('transform', e.transform));
+  svg.call(zoom);
+
+  // Topic data
+  const topicColorMap = {};
+  const topicLabelMap = {};
+  if (DATA.topics) {
+    DATA.topics.topics.forEach(t => {
+      topicColorMap[t.id] = t.color;
+      topicLabelMap[t.id] = t.label;
+    });
+  }
+
+  // Color modes
+  let colorMode = 'topic';
+  const dateExtent = d3.extent(points, p => p.date);
+  const timeColor = d3.scaleSequential(d3.interpolateViridis)
+    .domain([new Date(dateExtent[0]), new Date(dateExtent[1])]);
+  const lenExtent = d3.extent(points, p => p.total_chars);
+  const lenColor = d3.scaleSequential(d3.interpolateInferno).domain(lenExtent);
+
+  function getColor(d) {
+    switch (colorMode) {
+      case 'topic': return topicColorMap[d.topic] || '#555';
+      case 'time': return timeColor(new Date(d.date));
+      case 'length': return lenColor(d.total_chars);
+      case 'cluster': return d.cluster >= 0 ? TOPIC_COLORS[d.cluster % TOPIC_COLORS.length] : '#4a4a5a';
+      default: return '#555';
     }
-  }).on('mouseleave', () => tooltip.classList.remove('visible'));
+  }
+
+  const dots = dotGroup.selectAll('.dot')
+    .data(points)
+    .enter().append('circle')
+    .attr('class', 'dot')
+    .attr('cx', d => xScale(d.x))
+    .attr('cy', d => yScale(d.y))
+    .attr('r', 2.5)
+    .attr('fill', d => getColor(d))
+    .attr('opacity', 0.7)
+    .attr('cursor', 'pointer');
+
+  // Tooltip
+  dots.on('mouseover', (event, d) => {
+    const topicLabel = topicLabelMap[d.topic] || 'Unknown';
+    const topicColor = topicColorMap[d.topic] || '#555';
+    tooltip.querySelector('.tt-name').textContent = d.name || 'Untitled';
+    tooltip.querySelector('.tt-meta').textContent = `${d.date} · ${d.total_msgs} messages`;
+    const ttTopic = tooltip.querySelector('.tt-topic');
+    ttTopic.textContent = topicLabel;
+    ttTopic.style.background = topicColor + '22';
+    ttTopic.style.color = topicColor;
+    tooltip.classList.add('visible');
+
+    const rect = container.getBoundingClientRect();
+    tooltip.style.left = Math.min(event.clientX - rect.left + 12, W - 290) + 'px';
+    tooltip.style.top = event.clientY - rect.top - 10 + 'px';
+  }).on('mouseout', () => tooltip.classList.remove('visible'));
 
   // Color mode buttons
   document.querySelectorAll('.umap-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.umap-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentMode = btn.dataset.color;
-      circles.transition().duration(400).attr('fill', d => getColor(d));
-      updateLegend();
+      colorMode = btn.dataset.color;
+      dots.transition().duration(400).attr('fill', d => getColor(d));
     });
   });
 
   // Legend
-  function updateLegend() {
-    legend.innerHTML = '';
-    if (currentMode === 'topic') {
-      const topics = DATA.topics ? DATA.topics.topics : [];
-      topics.forEach(t => {
-        const item = document.createElement('div');
-        item.className = 'legend-item';
-        item.innerHTML = `<div class="legend-dot" style="background:${t.color}"></div>${t.label}`;
-        legend.appendChild(item);
-      });
-    } else if (currentMode === 'cluster') {
-      clusters.forEach(cl => {
-        const item = document.createElement('div');
-        item.className = 'legend-item';
-        item.innerHTML = `<div class="legend-dot" style="background:${cl.topic_color}"></div>${cl.topic_label} (${cl.size})`;
-        legend.appendChild(item);
-      });
-    }
-  }
-  updateLegend();
+  const legendContainer = document.getElementById('umap-legend');
+  const sorted = Object.entries(topicLabelMap).sort((a, b) => a[0] - b[0]);
+  sorted.forEach(([tid, label]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${topicColorMap[tid] || '#555'}"></div>
+      <span>${label}</span>`;
+    legendContainer.appendChild(item);
+  });
+
+  // Auto-fit
+  const xMin = d3.min(points, p => xScale(p.x));
+  const xMax = d3.max(points, p => xScale(p.x));
+  const yMin = d3.min(points, p => yScale(p.y));
+  const yMax = d3.max(points, p => yScale(p.y));
+  const dW = xMax - xMin, dH = yMax - yMin;
+  const scale = Math.min(W / (dW + 80), H / (dH + 80)) * 0.9;
+  const tx = W / 2 - (xMin + dW / 2) * scale;
+  const ty = H / 2 - (yMin + dH / 2) * scale;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// KNOWLEDGE GRAPH
-// ═══════════════════════════════════════════════════════════════════════════════
-function renderGraph() {
-  if (!DATA.graph) return;
-  const { nodes, edges, categories } = DATA.graph;
+// ═══════════════════════════════════════════════════════════════════════════
+// NAV, PROGRESS, REVEAL
+// ═══════════════════════════════════════════════════════════════════════════
 
-  const container = document.getElementById('graph-container');
-  const svg = d3.select('#graph-svg');
-  const tooltip = document.getElementById('graph-tooltip');
+function setupNav() {
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 50);
 
-  const W = container.getBoundingClientRect().width;
-  const H = container.getBoundingClientRect().height;
+    // Progress bar
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }, { passive: true });
+}
 
-  svg.attr('viewBox', `0 0 ${W} ${H}`);
+function setupReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
 
-  // Defs: arrowheads (not needed for undirected)
-  const defs = svg.append('defs');
-  const filter = defs.append('filter').attr('id', 'glow');
-  filter.append('feGaussianBlur').attr('stdDeviation', 3).attr('result', 'coloredBlur');
-  const feMerge = filter.append('feMerge');
-  feMerge.append('feMergeNode').attr('in', 'coloredBlur');
-  feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
 
-  // Zoom
-  const zoomG = svg.append('g');
-  const zoom = d3.zoom().scaleExtent([0.3, 8]).on('zoom', e => zoomG.attr('transform', e.transform));
-  svg.call(zoom);
+async function init() {
+  await loadData();
+  document.getElementById('loading').classList.add('hidden');
 
-  // Category filter
-  let activeCategories = new Set(categories.map(c => c.name));
-  const pillsEl = document.getElementById('category-pills');
-  const legendEl = document.getElementById('graph-legend');
+  setupNav();
+  setupReveal();
+  animateCounters();
 
-  const CATEGORY_COLORS = {
-    'AI/ML':        '#6366f1',
-    'Software':     '#22c55e',
-    'Business':     '#f59e0b',
-    'Data Science': '#06b6d4',
-    'Leadership':   '#ec4899',
-    'Research':     '#a855f7',
-    'Other':        '#94a3b8',
-  };
+  // Initialize scrollytelling charts
+  initLandscapeChart();
+  initObsessionsChart();
+  initLibraryChart();
+  initDualLifeChart();
+  initThreadsChart();
+  initMetaCogChart();
 
-  categories.forEach(cat => {
-    const color = CATEGORY_COLORS[cat.name] || '#888';
-    // Pill
-    const pill = document.createElement('div');
-    pill.className = 'pill active';
-    pill.style.color = color;
-    pill.style.borderColor = color + '60';
-    pill.innerHTML = `<div class="dot" style="background:${color}"></div>${cat.name} (${cat.count})`;
-    pill.addEventListener('click', () => {
-      pill.classList.toggle('active');
-      if (activeCategories.has(cat.name)) activeCategories.delete(cat.name);
-      else activeCategories.add(cat.name);
-      updateVisibility();
+  // Trigger first step for each section
+  updateLandscapeStep(0);
+  updateObsessionsStep(0);
+
+  // Set up scroll observers
+  setupScrollama();
+
+  // Interactive bowl sections (render when scrolled into view)
+  const bowlObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      if (e.target.id === 'graph-section' && !STATE.graphRendered) {
+        STATE.graphRendered = true;
+        renderGraph();
+      }
+      if (e.target.id === 'explore-section' && !STATE.umapRendered) {
+        STATE.umapRendered = true;
+        renderExploreUMAP();
+      }
     });
-    pillsEl.appendChild(pill);
+  }, { threshold: 0.1 });
 
-    // Legend item
-    const li = document.createElement('div');
-    li.className = 'legend-item';
-    li.innerHTML = `<div class="legend-dot" style="background:${color}"></div>${cat.name}`;
-    legendEl.appendChild(li);
-  });
-
-  // Force simulation
-  const simNodes = nodes.map(n => ({ ...n }));
-  const simLinks = edges.map(e => ({ ...e }));
-
-  const sizeScale = d3.scaleSqrt().domain([0, d3.max(nodes, n => n.freq)]).range([4, 22]);
-
-  const simulation = d3.forceSimulation(simNodes)
-    .force('link', d3.forceLink(simLinks).id(d => d.id).distance(d => 80 + (1 / d.weight) * 60).strength(0.3))
-    .force('charge', d3.forceManyBody().strength(-280).distanceMax(500))
-    .force('center', d3.forceCenter(W / 2, H / 2).strength(0.05))
-    .force('collision', d3.forceCollide(d => sizeScale(d.freq) + 8))
-    .alphaDecay(0.015);
-
-  // Links
-  const linkSel = zoomG.append('g').attr('class', 'links')
-    .selectAll('line').data(simLinks).join('line')
-    .attr('stroke', d => {
-      const sNode = nodes.find(n => n.id === d.source);
-      return sNode ? (CATEGORY_COLORS[sNode.category] || '#888') : '#888';
-    })
-    .attr('stroke-opacity', 0.2)
-    .attr('stroke-width', d => d.width);
-
-  // Nodes
-  const nodeSel = zoomG.append('g').attr('class', 'nodes')
-    .selectAll('g').data(simNodes).join('g')
-    .attr('class', 'node')
-    .call(d3.drag()
-      .on('start', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x; d.fy = d.y;
-      })
-      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
-      .on('end', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null; d.fy = null;
-      }));
-
-  nodeSel.append('circle')
-    .attr('r', d => sizeScale(d.freq))
-    .attr('fill', d => CATEGORY_COLORS[d.category] || '#888')
-    .attr('fill-opacity', 0.8)
-    .attr('stroke', d => CATEGORY_COLORS[d.category] || '#888')
-    .attr('stroke-width', 1.5)
-    .attr('stroke-opacity', 0.4);
-
-  nodeSel.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'middle')
-    .attr('fill', 'white')
-    .attr('font-size', d => Math.max(7, Math.min(12, sizeScale(d.freq) * 0.7)))
-    .attr('font-family', 'Inter, sans-serif')
-    .attr('font-weight', '600')
-    .attr('pointer-events', 'none')
-    .attr('paint-order', 'stroke')
-    .attr('stroke', 'rgba(10,10,15,0.5)')
-    .attr('stroke-width', 2)
-    .text(d => sizeScale(d.freq) > 8 ? d.label : '');
-
-  // Tooltip
-  nodeSel.on('mouseover', function(event, d) {
-    d3.select(this).select('circle').attr('fill-opacity', 1).attr('filter', 'url(#glow)');
-    tooltip.classList.add('visible');
-    tooltip.innerHTML = `
-      <strong style="color:${CATEGORY_COLORS[d.category]}">${d.label}</strong><br/>
-      <span style="color:#6e6e8a">${d.category}</span><br/>
-      <span style="font-family: monospace; font-size: 0.7em">${d.freq} conversations · ${d.degree} connections</span>
-    `;
-  })
-  .on('mousemove', function(event) {
-    const rect = container.getBoundingClientRect();
-    tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
-    tooltip.style.top = (event.clientY - rect.top + 12) + 'px';
-  })
-  .on('mouseout', function() {
-    d3.select(this).select('circle').attr('fill-opacity', 0.8).attr('filter', null);
-    tooltip.classList.remove('visible');
-  });
-
-  simulation.on('tick', () => {
-    linkSel
-      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-    nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
-  });
-
-  function updateVisibility() {
-    nodeSel.attr('opacity', d => activeCategories.has(d.category) ? 1 : 0.1);
-    linkSel.attr('opacity', d => {
-      const s = simNodes.find(n => n.id === (d.source.id || d.source));
-      const t = simNodes.find(n => n.id === (d.target.id || d.target));
-      return (s && t && activeCategories.has(s.category) && activeCategories.has(t.category)) ? 1 : 0.02;
-    });
-  }
-
-  // Graph controls
-  document.getElementById('graph-zoom-in').addEventListener('click', () => {
-    svg.transition().duration(300).call(zoom.scaleBy, 1.5);
-  });
-  document.getElementById('graph-zoom-out').addEventListener('click', () => {
-    svg.transition().duration(300).call(zoom.scaleBy, 0.67);
-  });
-  document.getElementById('graph-reset').addEventListener('click', () => {
-    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
-  });
+  const graphEl = document.getElementById('graph-section');
+  const exploreEl = document.getElementById('explore-section');
+  if (graphEl) bowlObserver.observe(graphEl);
+  if (exploreEl) bowlObserver.observe(exploreEl);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOOLTIP UTILITY
-// ═══════════════════════════════════════════════════════════════════════════════
-function createFloatingTooltip() {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    position: fixed;
-    background: rgba(18,18,26,0.95);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-family: Inter, sans-serif;
-    color: #e8e8f0;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.1s;
-    z-index: 1000;
-    max-width: 240px;
-    line-height: 1.5;
-    backdrop-filter: blur(8px);
-  `;
-  document.body.appendChild(el);
-
-  return {
-    show(event, html) {
-      el.innerHTML = html;
-      el.style.opacity = '1';
-      this.move(event);
-    },
-    move(event) {
-      const x = event.clientX + 14;
-      const y = event.clientY + 14;
-      el.style.left = Math.min(x, window.innerWidth - 260) + 'px';
-      el.style.top = Math.min(y, window.innerHeight - 120) + 'px';
-    },
-    hide() { el.style.opacity = '0'; },
-  };
-}
-
-// ── Start ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', init);
+init();
